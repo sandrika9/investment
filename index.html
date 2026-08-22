@@ -200,6 +200,15 @@
         let activeTab = 'dashboard';
         let userPackagesList = [];
 
+        // პაკეტების კონფიგურაცია
+        const AVAILABLE_PACKAGES = [
+            { id: 'Little Investor', name: 'Little Investor', price: 20, daily: 0.99, desc: 'იდეალური სტარტი დამწყებთათვის. გადადგი პირველი ნაბიჯი ფინანსური თავისუფლებისკენ მინიმალური რისკით!', color: 'from-blue-500/20 to-indigo-500/5' },
+            { id: '9-5 Job', name: '9-5 Job', price: 60, daily: 3.99, desc: 'შეცვალე რუტინა და გამოიმუშავე ყოველდღიურად სტაბილური შემოსავალი შენი ყოველდღიური სამუშაოს პარალელურად.', color: 'from-cyan-500/20 to-blue-500/5' },
+            { id: 'Normal Investor', name: 'Normal Investor', price: 199, daily: 22.90, desc: 'გაჰყევი პროფესიონალების გზას. მყარი პაკეტი სერიოზული შემოსავლისა და ზრდისთვის.', color: 'from-amber-500/20 to-orange-500/5' },
+            { id: 'Big Boy', name: 'Big Boy', price: 399, daily: 44.90, desc: 'დიდი თამაშებისთვის მზად ხარ? უზრუნველყავი მაღალი შემოსავალი და აიყვანე შენი პორტფოლიო ახალ დონეზე.', color: 'from-purple-500/20 to-pink-500/5' },
+            { id: 'Boss', name: 'Boss', price: 999, daily: 119.00, desc: 'ელიტარული სტატუსი პლატფორმის ლიდერებისთვის. მაქსიმალური მოგება და პრივილეგიები ყოველგვარი შეზღუდვის გარეშე!', color: 'from-emerald-500/20 to-teal-500/5' }
+        ];
+
         const urlParams = new URLSearchParams(window.location.search);
         const refFromUrl = urlParams.get('ref');
         if (refFromUrl) {
@@ -407,6 +416,21 @@
             const content = document.getElementById('tabContent');
             await fetchUserPackages();
 
+            // გამოვთვალოთ დროის სხვაობა ბოლო ქეისის გახსნიდან (6 საათიანი კულდაუნი)
+            const lastClaim = userProfile?.last_claim_at ? new Date(userProfile.last_claim_at) : null;
+            const now = new Date();
+            let canClaim = true;
+            let remainingMs = 0;
+
+            if (lastClaim) {
+                const diffMs = now - lastClaim;
+                const sixHoursMs = 6 * 60 * 60 * 1000;
+                if (diffMs < sixHoursMs) {
+                    canClaim = false;
+                    remainingMs = sixHoursMs - diffMs;
+                }
+            }
+
             content.innerHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div class="glass-card p-6 rounded-2xl relative overflow-hidden">
@@ -436,8 +460,10 @@
                             </div>
                         </div>
                         <div class="mt-4 pt-4 border-t border-gray-800 flex justify-between items-center">
-                            <span class="text-xs text-gray-400">ყოველ 6 საათიანი შემოსავალი</span>
-                            <button onclick="openCaseClaimModal()" class="bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500 hover:text-black font-semibold px-3 py-1.5 rounded-lg text-xs transition shadow-lg shadow-emerald-500/10">ქეისის გახსნა</button>
+                            <span id="claimTimerDisplay" class="text-xs text-gray-400">${canClaim ? 'ქეისი ხელმისაწვდომია!' : 'მომდევნო ქეისი მალე'}</span>
+                            <button id="claimCaseMainBtn" onclick="openCaseClaimModal()" ${!canClaim ? 'disabled' : ''} class="${canClaim ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500 hover:text-black shadow-emerald-500/10' : 'bg-gray-800 text-gray-500 border border-gray-700 cursor-not-allowed'} font-semibold px-3 py-1.5 rounded-lg text-xs transition shadow-lg">
+                                ${canClaim ? 'ქეისის გახსნა' : 'ლოდინი...'}
+                            </button>
                         </div>
                     </div>
 
@@ -474,6 +500,38 @@
                     `}
                 </div>
             `;
+
+            if (!canClaim && remainingMs > 0) {
+                startCountdownTimer(remainingMs);
+            }
+        }
+
+        function startCountdownTimer(durationMs) {
+            let timeLeft = durationMs;
+            const timerDisplay = document.getElementById('claimTimerDisplay');
+            const claimBtn = document.getElementById('claimCaseMainBtn');
+
+            const interval = setInterval(() => {
+                timeLeft -= 1000;
+                if (timeLeft <= 0) {
+                    clearInterval(interval);
+                    if (timerDisplay) timerDisplay.innerText = 'ქეისი ხელმისაწვდომია!';
+                    if (claimBtn) {
+                        claimBtn.disabled = false;
+                        claimBtn.className = 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500 hover:text-black shadow-emerald-500/10 font-semibold px-3 py-1.5 rounded-lg text-xs transition shadow-lg';
+                        claimBtn.innerText = 'ქეისის გახსნა';
+                    }
+                    return;
+                }
+
+                const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+
+                if (timerDisplay) {
+                    timerDisplay.innerText = `შემდეგი ქეისი: ${hours}სთ ${minutes}წთ ${seconds}წმ`;
+                }
+            }, 1000);
         }
 
         // ==========================================
@@ -489,28 +547,26 @@
             const now = new Date();
 
             if (lastClaim) {
-                const diffHours = (now - lastClaim) / (1000 * 60 * 60);
-                if (diffHours < 6) {
-                    const remainingMins = Math.ceil((6 - diffHours) * 60);
-                    const hoursLeft = Math.floor(remainingMins / 60);
-                    const minsLeft = remainingMins % 60;
-                    alert(`ქეისის გასახსნელად უნდა დაიცადო კიდევ ${hoursLeft} სთ და ${minsLeft} წთ.`);
+                const diffMs = now - lastClaim;
+                const sixHoursMs = 6 * 60 * 60 * 1000;
+                if (diffMs < sixHoursMs) {
+                    alert("ქეისის გასახსნელად ჯერ არ გასულა 6 საათიანი ინტერვალი!");
                     return;
                 }
             }
 
-            let baseSixHourTotal = 0;
+            // გამოვთვალოთ ყოველ 6 საათიანი ბაზისური თანხა (დღიური ჯამის 1/4)
+            let totalDailySum = 0;
             userPackagesList.forEach(up => {
-                let dailyRate = 0.025; 
-                if (up.package_name && up.package_name.includes('Pro')) dailyRate = 0.035; 
-                if (up.package_name && up.package_name.includes('VIP')) dailyRate = 0.05; 
-
-                const dailyProfit = up.amount * dailyRate;
-                const sixHourProfit = dailyProfit / 4;
-                baseSixHourTotal += sixHourProfit;
+                const matchedPkg = AVAILABLE_PACKAGES.find(p => p.name.trim().toLowerCase() === up.package_name.trim().toLowerCase());
+                if (matchedPkg) {
+                    totalDailySum += matchedPkg.daily;
+                } else {
+                    totalDailySum += 1.0; // ფოლბექი
+                }
             });
 
-            if (baseSixHourTotal <= 0) baseSixHourTotal = 1.0;
+            const baseSixHourAmount = totalDailySum / 4;
 
             const modalHtml = `
                 <div id="caseModalOverlay" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
@@ -531,21 +587,20 @@
                             მზადაა გასახსნელად
                         </div>
 
-                        <button id="spinCaseBtn" onclick="spinAndClaimCase(${baseSixHourTotal})" class="w-full gold-gradient-bg text-black font-bold py-3.5 rounded-xl hover:brightness-110 transition text-sm shadow-lg shadow-amber-500/20">
+                        <button id="spinCaseBtn" onclick="spinAndClaimCase(${baseSixHourAmount})" class="w-full gold-gradient-bg text-black font-bold py-3.5 rounded-xl hover:brightness-110 transition text-sm shadow-lg shadow-amber-500/20">
                             ქეისის დატრიალება
                         </button>
                     </div>
                 </div>
             `;
             document.body.insertAdjacentHTML('beforeend', modalHtml);
-            buildSpinnerItems(baseSixHourTotal);
+            buildSpinnerItems(baseSixHourAmount);
         }
 
         function buildSpinnerItems(baseAmount) {
             const track = document.getElementById('spinnerTrack');
             if (!track) return;
 
-            // შევქმნათ ელემენტების დიდი სია რულეტკისთვის (მაგ: 60 ელემენტი)
             const itemTemplates = [
                 { name: 'Common', mult: 1.0, color: 'text-gray-400 bg-gray-800/40 border-gray-700' },
                 { name: 'Rare', mult: 1.5, color: 'text-blue-400 bg-blue-950/40 border-blue-500/40' },
@@ -554,7 +609,6 @@
             ];
 
             let html = '';
-            // გენერაცია შემთხვევითი წესით
             window.generatedSpinItems = [];
             for (let i = 0; i < 60; i++) {
                 const randTmpl = itemTemplates[Math.floor(Math.random() * itemTemplates.length)];
@@ -562,7 +616,7 @@
                 html += `
                     <div class="case-item-card border ${randTmpl.color}">
                         <span class="text-[10px] uppercase font-bold tracking-wider">${randTmpl.name}</span>
-                        <span class="text-lg font-ext500 font-display mt-1">$${(baseAmount * randTmpl.mult).toFixed(1)}</span>
+                        <span class="text-lg font-ext500 font-display mt-1">$${(baseAmount * randTmpl.mult).toFixed(2)}</span>
                         <span class="text-[10px] opacity-70">(${randTmpl.mult}x)</span>
                     </div>
                 `;
@@ -577,7 +631,6 @@
             const info = document.getElementById('caseResultInfo');
             if (btn) btn.disabled = true;
 
-            // შანსების ზუსტი განაწილება (Index 45-ე ელემენტზე გავაჩეროთ გამარჯვებული)
             const rand = Math.random() * 100;
             let winningTmpl;
             if (rand < 60) winningTmpl = { name: 'Common (60%)', mult: 1.0, color: 'text-gray-400' };
@@ -585,10 +638,8 @@
             else if (rand < 97) winningTmpl = { name: 'Epic (12%)', mult: 2.0, color: 'text-purple-400' };
             else winningTmpl = { name: 'Legendary (3%) 🔥', mult: 3.0, color: 'text-amber-400' };
 
-            // ჩავანაცვლოთ 45-ე ელემენტი ზუსტი მომგებიანით
             window.generatedSpinItems[45] = winningTmpl;
-            const cardWidth = 120; // ერთეულის სიგანე პიქსელებში
-            // გავასწოროთ 45-ე ინდექსი ცენტრში (კონტეინერის სიგანე დაახლ. 520px / 2 = 260px)
+            const cardWidth = 120;
             const targetPixelOffset = (45 * cardWidth) - (520 / 2) + (cardWidth / 2) + (Math.random() * 40 - 20);
 
             track.style.transition = 'transform 4s cubic-bezier(0.15, 0.85, 0.15, 1)';
@@ -627,36 +678,34 @@
 
         function loadPackagesTab() {
             const content = document.getElementById('tabContent');
-            const packages = [
-                { id: 'Starter Plan', name: 'Starter Plan', min: 10, max: 100, daily: '2.5%', days: 30, color: 'from-blue-500/20 to-indigo-500/5' },
-                { id: 'Pro Yield', name: 'Pro Yield', min: 101, max: 500, daily: '3.5%', days: 30, color: 'from-amber-500/20 to-orange-500/5' },
-                { id: 'VIP Investor', name: 'VIP Investor', min: 501, max: 5000, daily: '5.0%', days: 30, color: 'from-emerald-500/20 to-teal-500/5' }
-            ];
 
             content.innerHTML = `
                 <div class="mb-6">
                     <h2 class="text-xl font-bold font-display text-white">საინვესტიციო პაკეტები</h2>
-                    <p class="text-sm text-gray-400 mt-1">აირჩიე სასურველი პაკეტი და მიიღე შემოსავალი ყოველ 6 საათში</p>
+                    <p class="text-sm text-gray-400 mt-1">აირჩიე შენზე მორგებული პაკეტი და მიიღე შემოსავალი ყოველ 6 საათში</p>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    ${packages.map(p => {
+                    ${AVAILABLE_PACKAGES.map(p => {
                         const isAlreadyActive = userPackagesList.some(up => up.package_name && up.package_name.trim().toLowerCase() === p.name.trim().toLowerCase());
                         return `
                             <div class="glass-card p-6 rounded-2xl relative border border-gray-800 flex flex-col justify-between">
                                 <div>
                                     <div class="w-full h-2 rounded-full bg-gradient-to-r ${p.color} mb-4"></div>
                                     <h3 class="text-xl font-bold text-white">${p.name}</h3>
+                                    <p class="text-xs text-gray-400 mt-2 min-h-[36px]">${p.desc}</p>
+                                    
                                     <div class="mt-4 mb-6">
-                                        <span class="text-4xl font-extrabold text-amber-500 font-display">${p.daily}</span>
+                                        <span class="text-3xl font-extrabold text-amber-500 font-display">$${p.daily}</span>
                                         <span class="text-xs text-gray-400 block mt-1">დღიური მოგება</span>
                                     </div>
+
                                     <ul class="space-y-3 text-sm text-gray-300 border-t border-gray-800/80 pt-4 mb-6">
-                                        <li class="flex justify-between"><span class="text-gray-500">ინვესტიცია:</span> <span class="font-semibold">$${p.min} - $${p.max}</span></li>
-                                        <li class="flex justify-between"><span class="text-gray-500">ვადა:</span> <span class="font-semibold">${p.days} დღე</span></li>
+                                        <li class="flex justify-between"><span class="text-gray-500">ინვესტიცია:</span> <span class="font-semibold text-white">$${p.price}</span></li>
+                                        <li class="flex justify-between"><span class="text-gray-500">6-სთ ქეისის წილი:</span> <span class="font-semibold text-amber-400">$${(p.daily / 4).toFixed(2)}</span></li>
                                         <li class="flex justify-between"><span class="text-gray-500">გადახდა:</span> <span class="font-semibold">ყოველ 6 საათში</span></li>
                                     </ul>
                                 </div>
-                                <button onclick="openBuyPackageModal('${p.name}', ${p.min}, ${p.max})" class="w-full ${isAlreadyActive ? 'bg-gray-800 text-gray-400 border border-gray-700' : 'gold-gradient-bg text-black font-bold'} py-3 rounded-xl transition text-sm shadow-md">
+                                <button onclick="openBuyPackageModal('${p.name}', ${p.price})" class="w-full ${isAlreadyActive ? 'bg-gray-800 text-gray-400 border border-gray-700' : 'gold-gradient-bg text-black font-bold'} py-3 rounded-xl transition text-sm shadow-md">
                                     ${isAlreadyActive ? 'პაკეტი აქტიურია' : 'პაკეტის შეძენა'}
                                 </button>
                             </div>
@@ -666,7 +715,7 @@
             `;
         }
 
-        function openBuyPackageModal(packageName, min, max) {
+        function openBuyPackageModal(packageName, price) {
             const modalHtml = `
                 <div id="buyModalOverlay" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
                     <div class="glass-panel max-w-md w-full p-8 rounded-2xl border border-gray-800">
@@ -674,9 +723,8 @@
                             <h3 class="text-lg font-bold text-white">${packageName}</h3>
                             <button onclick="document.getElementById('buyModalOverlay').remove()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
                         </div>
-                        <p class="text-xs text-gray-400 mb-4">შეიყვანე თანხა დიაპაზონში (<span class="text-amber-400">$${min} - $${max}</span>):</p>
-                        <input type="number" id="investAmountInput" min="${min}" max="${max}" placeholder="${min}" class="w-full bg-gray-900 border border-gray-700 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-amber-500 mb-6 text-sm">
-                        <button onclick="confirmBuyPackage('${packageName}', ${min}, ${max})" class="w-full gold-gradient-bg text-black font-bold py-3.5 rounded-xl transition text-sm shadow-lg shadow-amber-500/20">
+                        <p class="text-xs text-gray-400 mb-4">პაკეტის ღირებულება შეადგენს: <span class="text-amber-400 font-bold text-sm">$${price}</span></p>
+                        <button onclick="confirmBuyPackage('${packageName}', ${price})" class="w-full gold-gradient-bg text-black font-bold py-3.5 rounded-xl transition text-sm shadow-lg shadow-amber-500/20">
                             დადასტურება და შეძენა
                         </button>
                     </div>
@@ -685,24 +733,18 @@
             document.body.insertAdjacentHTML('beforeend', modalHtml);
         }
 
-        async function confirmBuyPackage(packageName, min, max) {
-            const amountVal = parseFloat(document.getElementById('investAmountInput').value);
-            if (isNaN(amountVal) || amountVal < min || amountVal > max) {
-                alert(`თანხა უნდა იყოს ${min} და ${max} დოლარს შორის!`);
-                return;
-            }
-
-            if ((userProfile?.balance || 0) < amountVal) {
+        async function confirmBuyPackage(packageName, price) {
+            if ((userProfile?.balance || 0) < price) {
                 alert("ბალანსზე არ გაქვს საკმარისი თანხა! ჯერ გააკეთე დეპოზიტი.");
                 return;
             }
 
-            const newBalance = userProfile.balance - amountVal;
+            const newBalance = userProfile.balance - price;
             await db.from('profiles').update({ balance: newBalance }).eq('id', currentUser.id);
             await db.from('user_packages').insert([{
                 user_id: currentUser.id,
                 package_name: packageName,
-                amount: amountVal,
+                amount: price,
                 status: 'active'
             }]);
 
