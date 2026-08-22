@@ -446,18 +446,20 @@
                 }
             }
 
-            let totalReward = 0;
+            // გამოვთვალოთ საბაზისო 6-საათიანი თანხა ყველა აქტიური პაკეტიდან
+            // მაგ: თუ 500$-იანი პაკეტია (VIP Investor), დღიური მოგებაა 5% = 25$. 6 საათიანი = 25 / 4 = 6.25$
+            let baseSixHourTotal = 0;
             userPackagesList.forEach(up => {
-                let dailyRate = 0.025; 
-                if (up.package_name && up.package_name.includes('Pro')) dailyRate = 0.035; 
-                if (up.package_name && up.package_name.includes('VIP')) dailyRate = 0.05; 
+                let dailyRate = 0.025; // Starter 2.5%
+                if (up.package_name && up.package_name.includes('Pro')) dailyRate = 0.035; // Pro Yield 3.5%
+                if (up.package_name && up.package_name.includes('VIP')) dailyRate = 0.05; // VIP Investor 5.0%
 
                 const dailyProfit = up.amount * dailyRate;
                 const sixHourProfit = dailyProfit / 4;
-                totalReward += sixHourProfit;
+                baseSixHourTotal += sixHourProfit;
             });
 
-            if (totalReward <= 0) totalReward = 0.50;
+            if (baseSixHourTotal <= 0) baseSixHourTotal = 1.0;
 
             const modalHtml = `
                 <div id="caseModalOverlay" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
@@ -465,14 +467,18 @@
                         <div class="w-16 h-16 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto text-2xl mb-4">
                             <i class="fa-solid fa-box-open animate-bounce"></i>
                         </div>
-                        <h3 class="text-xl font-bold text-white mb-2 font-display">6-საათიანი ქეისი</h3>
-                        <p class="text-xs text-gray-400 mb-6">გახსენი ქეისი და მიიღე შენი მოგება პაკეტებიდან!</p>
+                        <h3 class="text-xl font-bold text-white mb-2 font-display">6-საათიანი ქეისის გახსნა</h3>
+                        <p class="text-xs text-gray-400 mb-6">დაატრიალე ქეისი და მიიღე შენი რარობა (Common, Rare, Epic, Legendary)!</p>
                         
-                        <div id="caseBoxDisplay" class="bg-gray-900/90 py-6 rounded-xl border border-gray-800 mb-6 text-3xl font-extrabold text-amber-400 font-display">
-                            ???
+                        <div id="caseRarityDisplay" class="bg-gray-900/90 py-4 rounded-xl border border-gray-800 mb-2 text-sm font-bold text-gray-400 uppercase tracking-widest">
+                            მზადაა გასახსნელად
                         </div>
 
-                        <button id="spinCaseBtn" onclick="spinAndClaim(${totalReward})" class="w-full gold-gradient-bg text-black font-bold py-3.5 rounded-xl hover:brightness-110 transition text-sm shadow-lg shadow-amber-500/20">
+                        <div id="caseBoxDisplay" class="bg-gray-900/90 py-6 rounded-xl border border-gray-800 mb-6 text-3xl font-extrabold text-amber-400 font-display">
+                            $${baseSixHourTotal.toFixed(2)} (1.0x)
+                        </div>
+
+                        <button id="spinCaseBtn" onclick="spinAndClaimCase(${baseSixHourTotal})" class="w-full gold-gradient-bg text-black font-bold py-3.5 rounded-xl hover:brightness-110 transition text-sm shadow-lg shadow-amber-500/20">
                             ქეისის გახსნა
                         </button>
                     </div>
@@ -481,25 +487,58 @@
             document.body.insertAdjacentHTML('beforeend', modalHtml);
         }
 
-        async function spinAndClaim(rewardAmount) {
+        async function spinAndClaimCase(baseAmount) {
             const btn = document.getElementById('spinCaseBtn');
             const display = document.getElementById('caseBoxDisplay');
+            const rarityDisplay = document.getElementById('caseRarityDisplay');
             if (btn) btn.disabled = true;
+
+            // შანსების განაწილება (Probability Ratios)
+            // Common: 60%, Rare: 25%, Epic: 12%, Legendary: 3%
+            const rand = Math.random() * 100;
+            let chosenRarity = '';
+            let multiplier = 1.0;
+            let rarityColor = '';
+
+            if (rand < 60) {
+                chosenRarity = 'Common (60%)';
+                multiplier = 1.0;
+                rarityColor = 'text-gray-400 border-gray-700';
+            } else if (rand < 85) {
+                chosenRarity = 'Rare (25%)';
+                multiplier = 1.5;
+                rarityColor = 'text-blue-400 border-blue-500/40';
+            } else if (rand < 97) {
+                chosenRarity = 'Epic (12%)';
+                multiplier = 2.0;
+                rarityColor = 'text-purple-400 border-purple-500/40';
+            } else {
+                chosenRarity = 'Legendary (3%) 🔥';
+                multiplier = 3.0;
+                rarityColor = 'text-amber-400 border-amber-500/40';
+            }
+
+            const finalReward = baseAmount * multiplier;
 
             let counter = 0;
             const interval = setInterval(() => {
-                const randomFlashing = (Math.random() * rewardAmount * 1.5).toFixed(2);
-                if (display) display.innerText = `$${randomFlashing}`;
+                const randomMult = [1.0, 1.5, 2.0, 3.0][Math.floor(Math.random() * 4)];
+                const randomVal = baseAmount * randomMult;
+                if (display) display.innerText = `$${randomVal.toFixed(2)} (${randomMult}x)`;
                 counter++;
                 if (counter > 15) {
                     clearInterval(interval);
-                    if (display) display.innerText = `$${rewardAmount.toFixed(2)}`;
-                    finalizeClaim(rewardAmount);
+                    if (rarityDisplay) {
+                        rarityDisplay.innerText = chosenRarity;
+                        rarityDisplay.className = `bg-gray-900/90 py-4 rounded-xl border mb-2 text-sm font-bold uppercase tracking-widest ${rarityColor}`;
+                    }
+                    if (display) display.innerText = `$${finalReward.toFixed(2)} (${multiplier}x)`;
+                    finalizeClaim(finalReward, chosenRarity);
                 }
             }, 100);
         }
 
-        async function finalizeClaim(rewardAmount) {
+        async function finalizeClaim(rewardAmount, rarityName) {
             const newBal = (userProfile?.balance || 0) + rewardAmount;
             const newTotalEarned = (userProfile?.total_earned || 0) + rewardAmount;
             const nowIso = new Date().toISOString();
@@ -515,9 +554,9 @@
             setTimeout(() => {
                 const overlay = document.getElementById('caseModalOverlay');
                 if (overlay) overlay.remove();
-                alert(`გილოცავ! შენ წარმატებით აიღე $${rewardAmount.toFixed(2)} შენი 6-საათიანი ქეისიდან.`);
+                alert(`გილოცავ! შენ ამოიღე [${rarityName}] და მიიღე $${rewardAmount.toFixed(2)} შენი ქეისიდან.`);
                 loadDashboardTab();
-            }, 1200);
+            }, 1500);
         }
 
         function loadPackagesTab() {
