@@ -298,6 +298,9 @@
                     <button onclick="switchTab('referral')" id="tab-referral" class="px-5 py-3 font-medium text-sm rounded-xl transition flex items-center space-x-2 whitespace-nowrap text-gray-400 hover:bg-gray-800/50 hover:text-gray-200">
                         <i class="fa-solid fa-users"></i><span>რეფერალები</span>
                     </button>
+                    <button onclick="switchTab('lottery')" id="tab-lottery" class="px-5 py-3 font-medium text-sm rounded-xl transition flex items-center space-x-2 whitespace-nowrap text-gray-400 hover:bg-gray-800/50 hover:text-gray-200">
+                        <i class="fa-solid fa-dice"></i><span>გათამაშება</span>
+                    </button>
                     ${userProfile?.is_admin ? `
                         <button onclick="switchTab('admin')" id="tab-admin" class="px-5 py-3 font-medium text-sm rounded-xl transition flex items-center space-x-2 whitespace-nowrap text-red-400 hover:bg-red-950/30 border border-red-500/20">
                             <i class="fa-solid fa-user-shield"></i><span>ადმინ პანელი</span>
@@ -312,7 +315,7 @@
 
         function switchTab(tab) {
             activeTab = tab;
-            ['dashboard', 'packages', 'referral', 'admin'].forEach(t => {
+            ['dashboard', 'packages', 'referral', 'lottery', 'admin'].forEach(t => {
                 const btn = document.getElementById(`tab-${t}`);
                 if (!btn) return;
                 if (t === tab) {
@@ -325,11 +328,16 @@
             if (tab === 'dashboard') loadDashboardTab();
             if (tab === 'packages') loadPackagesTab();
             if (tab === 'referral') loadReferralTab();
+            if (tab === 'lottery') loadLotteryTab();
             if (tab === 'admin') loadAdminTab();
         }
 
         async function loadDashboardTab() {
             const content = document.getElementById('tabContent');
+            
+            // შევამოწმოთ აქტიური პაკეტები ამ მომხმარებლისთვის
+            const { data: userPkgs } = await db.from('user_packages').select('*').eq('user_id', currentUser.id);
+
             content.innerHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div class="glass-card p-6 rounded-2xl relative overflow-hidden">
@@ -358,7 +366,10 @@
                                 <i class="fa-solid fa-arrow-trend-up"></i>
                             </div>
                         </div>
-                        <p class="text-xs text-gray-500 mt-6"><i class="fa-solid fa-clock text-gray-600 mr-1"></i> ავტომატური ყოველდღიური დარიცხვა</p>
+                        <div class="mt-4 pt-4 border-t border-gray-800 flex justify-between items-center">
+                            <span class="text-xs text-gray-400">შესაძლებელია მოგების აღება</span>
+                            <button onclick="claimEarnings()" class="bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500 hover:text-black font-semibold px-3 py-1.5 rounded-lg text-xs transition">მოგების აღება</button>
+                        </div>
                     </div>
 
                     <div class="glass-card p-6 rounded-2xl">
@@ -371,8 +382,27 @@
                                 <i class="fa-solid fa-user-plus"></i>
                             </div>
                         </div>
-                        <p class="text-xs text-gray-500 mt-6"><i class="fa-solid fa-percent text-gray-600 mr-1"></i> 5% ბონუსი მოწვეულ მომხმარებლებზე</p>
+                        <p class="text-xs text-gray-500 mt-6"><i class="fa-solid fa-percent text-gray-600 mr-1"></i> 5% ბონუსი მეგობრებისგან</p>
                     </div>
+                </div>
+
+                <div class="glass-panel p-6 rounded-2xl border border-gray-800">
+                    <h3 class="text-lg font-bold font-display text-white mb-4">ჩემი აქტიური პაკეტები</h3>
+                    ${!userPkgs || userPkgs.length === 0 ? `
+                        <p class="text-sm text-gray-400 text-center py-6">აქტიური პაკეტები არ გაქვს. გადადი პაკეტების გვერდზე და გააქტიურე.</p>
+                    ` : `
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            ${userPkgs.map(up => `
+                                <div class="bg-gray-900/60 p-4 rounded-xl border border-gray-800 flex justify-between items-center">
+                                    <div>
+                                        <h4 class="font-bold text-white">${up.package_name || 'ინვესტიცია'}</h4>
+                                        <p class="text-xs text-gray-400 mt-1">თანხა: <span class="text-amber-400 font-semibold">$${up.amount}</span></p>
+                                    </div>
+                                    <span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">აქტიური</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `}
                 </div>
             `;
         }
@@ -406,13 +436,32 @@
                                     <li class="flex justify-between"><span class="text-gray-500">გატანა:</span> <span class="font-semibold text-emerald-400">ნებისმიერ დროს</span></li>
                                 </ul>
                             </div>
-                            <button onclick="buyPackage(${p.min})" class="w-full bg-amber-500/10 border border-amber-500/30 text-amber-500 font-bold py-3 rounded-xl hover:bg-amber-500 hover:text-black transition shadow-sm">
+                            <button onclick="buyPackage(${p.min}, '${p.name}')" class="w-full bg-amber-500/10 border border-amber-500/30 text-amber-500 font-bold py-3 rounded-xl hover:bg-amber-500 hover:text-black transition shadow-sm">
                                 პაკეტის გააქტიურება
                             </button>
                         </div>
                     `).join('')}
                 </div>
             `;
+        }
+
+        async function buyPackage(minAmount, pkgName) {
+            const currentBal = userProfile?.balance || 0;
+            if (currentBal < minAmount) {
+                alert(`პაკეტის ასარჩევად საჭიროა მინიმუმ $${minAmount} დეპოზიტი. შენი ბალანსია: $${currentBal.toFixed(2)}`);
+                return;
+            }
+
+            if (!confirm(`ნამდვილად გინდა გაააქტიურო ${pkgName} ($${minAmount})?`)) return;
+
+            // თანხის ჩამოჭრა ბალანსიდან და პაკეტის ჩაწერა
+            const newBalance = currentBal - minAmount;
+            await db.from('profiles').update({ balance: newBalance }).eq('id', currentUser.id);
+            await db.from('user_packages').insert({ user_id: currentUser.id, package_name: pkgName, amount: minAmount });
+
+            alert("პაკეტი წარმატებით გააქტიურდა!");
+            await fetchProfile();
+            renderMainDashboard();
         }
 
         function loadReferralTab() {
@@ -466,11 +515,59 @@
             `;
         }
 
+        function loadLotteryTab() {
+            const content = document.getElementById('tabContent');
+            content.innerHTML = `
+                <div class="max-w-xl mx-auto glass-card p-8 rounded-2xl border border-gray-800 text-center">
+                    <div class="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto text-2xl mb-4">
+                        <i class="fa-solid fa-dice"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold font-display text-white mb-2">იღბლიანი გათამაშება</h2>
+                    <p class="text-sm text-gray-400 mb-6">სცადე ბედი და მოიგე ფულადი პრიზები ყოველდღიურად!</p>
+                    
+                    <div class="bg-gray-900/80 p-6 rounded-xl border border-gray-800 mb-6">
+                        <span class="text-xs text-gray-500 uppercase tracking-wider block">საპრიზო ფონდი</span>
+                        <span class="text-4xl font-extrabold text-amber-400 font-display mt-1 block">$1,000</span>
+                    </div>
+
+                    <button onclick="playLottery()" class="w-full gold-gradient-bg text-black font-bold py-3.5 rounded-xl hover:brightness-110 transition text-sm shadow-lg shadow-amber-500/20">
+                        ბილეთის აღება და გათამაშება
+                    </button>
+                </div>
+            `;
+        }
+
+        async function playLottery() {
+            const prizes = [5, 10, 25, 50, 0, 100];
+            const randomPrize = prizes[Math.floor(Math.random() * prizes.length)];
+            
+            if (randomPrize > 0) {
+                const newBal = (userProfile?.balance || 0) + randomPrize;
+                await db.from('profiles').update({ balance: newBal }).eq('id', currentUser.id);
+                await fetchProfile();
+                alert(`გილოცავ! შენ მოიგე $${randomPrize}! თანხა დაგერიცხა ბალანსზე.`);
+            } else {
+                alert("სამწუხაროდ ამჯერად არაფერი ხვდა წილად. სცადე თავიდან!");
+            }
+        }
+
+        async function claimEarnings() {
+            const earned = userProfile?.total_earned || 0;
+            if (earned <= 0) {
+                alert("მოსაგები თანხა მიმდინარე პერიოდში არ გაქვს.");
+                return;
+            }
+            const newBal = (userProfile?.balance || 0) + earned;
+            await db.from('profiles').update({ balance: newBal, total_earned: 0 }).eq('id', currentUser.id);
+            await fetchProfile();
+            alert(`წარმატებით აიღე $${earned.toFixed(2)} და გადმოიტანე ძირითად ბალანსზე!`);
+            loadDashboardTab();
+        }
+
         async function loadAdminTab() {
             const content = document.getElementById('tabContent');
             content.innerHTML = `<div class="glass-card p-6 rounded-2xl text-center text-gray-400">მოთხოვნების ჩატვირთვა...</div>`;
 
-            // მოვაქვთ ყველა "pending" დეპოზიტი
             const { data: txs, error } = await db.from('transactions').select('*').eq('status', 'pending').order('created_at', { ascending: false });
 
             if (error) {
@@ -518,7 +615,6 @@
         async function approveDeposit(txId, userId, amount) {
             if (!confirm(`ნამდვილად გინდა დამტკიცება ($${amount})?`)) return;
 
-            // 1. მივუმატოთ მომხმარებელს ბალანსი
             const { data: profileData } = await db.from('profiles').select('balance').eq('id', userId).single();
             const currentBalance = profileData?.balance || 0;
             const newBalance = currentBalance + amount;
@@ -529,7 +625,6 @@
                 return;
             }
 
-            // 2. ტრანზაქციის სტატუსი გავხადოთ approved
             const { error: txErr } = await db.from('transactions').update({ status: 'approved' }).eq('id', txId);
             if (txErr) {
                 alert("ტრანზაქციის შეცდომა: " + txErr.message);
@@ -582,7 +677,7 @@
         }
 
         function openWithdrawModal() {
-            alert("გატანის ფანჯარა მალე დაემატება.");
+            alert("გატანის ფუნქცია მალე დაემატება.");
         }
 
         function closeModal() {
@@ -608,10 +703,6 @@
                 alert("მოთხოვნა გაგზავნილია! ადმინისტრატორი შეამოწმებს ტრანზაქციას.");
                 closeModal();
             }
-        }
-
-        function buyPackage(minAmount) {
-            alert(`პაკეტის ასარჩევად საჭიროა მინიმუმ $${minAmount} დეპოზიტი.`);
         }
     </script>
 </body>
