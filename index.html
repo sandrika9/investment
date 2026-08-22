@@ -139,18 +139,16 @@
 
     <!-- JS SCRIPT CORE -->
     <script>
-        // Supabase Initialization (შეცვლილია ცვლადის სახელი conflict-ის ასაცილებლად)
         const SUPABASE_URL = "https://gnzhgavbvkjvoeslrlns.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_e84AiBuFrqji-bPqqbsbaA_woYYU8dx";
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        const myWalletAddress = "TLCairnHMb79V8js1SKgK4iUEMgHnN4SUM"; // შენი USDT TRC20 მისამართი
+        const myWalletAddress = "TLCairnHMb79V8js1SKgK4iUEMgHnN4SUM"; 
 
         let currentUser = null;
         let userProfile = null;
         let activeTab = 'dashboard';
 
-        // Initial Load Check
         window.addEventListener('DOMContentLoaded', async () => {
             try {
                 const { data: { session } } = await db.auth.getSession();
@@ -309,9 +307,7 @@
                 </div>
 
                 <!-- TAB CONTENTS -->
-                <div id="tabContent">
-                    <!-- Dynamic Content Loaded Here -->
-                </div>
+                <div id="tabContent"></div>
             `;
 
             loadDashboardTab();
@@ -340,7 +336,6 @@
         async function loadDashboardTab() {
             const content = document.getElementById('tabContent');
             content.innerHTML = `
-                <!-- STATS CARDS -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div class="glass-card p-6 rounded-2xl relative overflow-hidden">
                         <div class="flex justify-between items-start">
@@ -428,7 +423,8 @@
 
         function loadReferralTab() {
             const content = document.getElementById('tabContent');
-            const refLink = `${window.location.origin}?ref=${userProfile?.referral_code || ''}`;
+            const refCode = userProfile?.referral_code || (currentUser ? currentUser.id.slice(0, 8) : '');
+            const refLink = `${window.location.origin}?ref=${refCode}`;
 
             content.innerHTML = `
                 <div class="max-w-2xl mx-auto glass-card p-8 rounded-2xl border border-gray-800">
@@ -464,6 +460,11 @@
                     </div>
                 </div>
             `;
+        }
+
+        function loadAdminTab() {
+            const content = document.getElementById('tabContent');
+            content.innerHTML = `<div class="glass-card p-6 rounded-2xl text-center text-gray-400">ადმინ პანელი მალე დაემატება</div>`;
         }
 
         // ---------- MODALS & ACTIONS ----------
@@ -503,6 +504,10 @@
             document.body.insertAdjacentHTML('beforeend', modalHtml);
         }
 
+        function openWithdrawModal() {
+            alert("გატანის ფანჯარა მალე დაემატება.");
+        }
+
         function closeModal() {
             const overlay = document.getElementById('modalOverlay');
             if (overlay) overlay.remove();
@@ -526,6 +531,10 @@
                 alert("მოთხოვნა გაგზავნილია! ადმინისტრატორი შეამოწმებს ტრანზაქციას.");
                 closeModal();
             }
+        }
+
+        function buyPackage(minAmount) {
+            alert(`პაკეტის ასარჩევად საჭიროა მინიმუმ $${minAmount} დეპოზიტი.`);
         }
     </script>
 </body>
