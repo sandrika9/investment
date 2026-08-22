@@ -141,7 +141,6 @@
         let userProfile = null;
         let activeTab = 'dashboard';
 
-        // ვამოწმებთ არის თუ არა ლინკში რეფერალური კოდი და ვინახავთ LocalStorage-ში
         const urlParams = new URLSearchParams(window.location.search);
         const refFromUrl = urlParams.get('ref');
         if (refFromUrl) {
@@ -169,8 +168,6 @@
             const { data, error } = await db.from('profiles').select('*').eq('id', currentUser.id).single();
             if (data) userProfile = data;
         }
-
-        // ---------- UI RENDERERS ----------
 
         function renderAuthPage(isSignUp = false) {
             const navRight = document.getElementById('navRight');
@@ -433,18 +430,16 @@
                     </div>
 
                     <div class="space-y-4">
-                        <!-- ცალკე რეფერალური კოდის ჩვენება -->
                         <div>
                             <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">შენი რეფერალური კოდი</label>
                             <div class="flex space-x-2">
                                 <input type="text" readonly value="${refCode}" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-sm text-amber-400 font-bold focus:outline-none">
-                                <button onclick="navigator.clipboard.writeText('${refCode}'); alert('კოდი დაკოპირდა!')" class="bg-gray-800 hover:bg-gray-750 text-white font-bold px-5 rounded-xl transition text-sm border border-gray-700">
+                                <button onclick="navigator.clipboard.writeText('${refCode}'); alert('კოდი დაკოპირდა!')" class="bg-gray-800 hover:bg-gray-700 text-white font-bold px-5 rounded-xl transition text-sm border border-gray-700">
                                     კოპირება
                                 </button>
                             </div>
                         </div>
 
-                        <!-- სრული ლინკი -->
                         <div>
                             <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">შენი რეფერალური ლინკი</label>
                             <div class="flex space-x-2">
@@ -519,7 +514,7 @@
         async function handleDepositSubmit(e) {
             e.preventDefault();
             const amount = parseFloat(document.getElementById('depAmount').value);
-            const txid = document.getElementById('depTxid'].value;
+            const txid = document.getElementById('depTxid').value; // აქ იყო შეცდომა (ფრჩხილი გასწორდა)
 
             const { error } = await db.from('transactions').insert({
                 user_id: currentUser.id,
