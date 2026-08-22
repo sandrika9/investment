@@ -139,10 +139,10 @@
 
     <!-- JS SCRIPT CORE -->
     <script>
-        // Supabase Initialization
+        // Supabase Initialization (შეცვლილია ცვლადის სახელი conflict-ის ასაცილებლად)
         const SUPABASE_URL = "https://gnzhgavbvkjvoeslrlns.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_e84AiBuFrqji-bPqqbsbaA_woYYU8dx";
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         const myWalletAddress = "TLCairnHMb79V8js1SKgK4iUEMgHnN4SUM"; // შენი USDT TRC20 მისამართი
 
@@ -153,7 +153,7 @@
         // Initial Load Check
         window.addEventListener('DOMContentLoaded', async () => {
             try {
-                const { data: { session } } = await supabase.auth.getSession();
+                const { data: { session } } = await db.auth.getSession();
                 if (session) {
                     currentUser = session.user;
                     await fetchProfile();
@@ -169,7 +169,7 @@
 
         async function fetchProfile() {
             if (!currentUser) return;
-            const { data, error } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
+            const { data, error } = await db.from('profiles').select('*').eq('id', currentUser.id).single();
             if (data) userProfile = data;
         }
 
@@ -251,7 +251,7 @@
                 const fullName = document.getElementById('fullName').value;
                 const refCode = document.getElementById('refCode').value;
 
-                const { data, error } = await supabase.auth.signUp({
+                const { data, error } = await db.auth.signUp({
                     email,
                     password,
                     options: { data: { full_name: fullName, referred_by: refCode } }
@@ -263,14 +263,14 @@
                     location.reload();
                 }
             } else {
-                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                const { data, error } = await db.auth.signInWithPassword({ email, password });
                 if (error) alert(error.message);
                 else location.reload();
             }
         }
 
         async function handleLogout() {
-            await supabase.auth.signOut();
+            await db.auth.signOut();
             location.reload();
         }
 
@@ -513,7 +513,7 @@
             const amount = parseFloat(document.getElementById('depAmount').value);
             const txid = document.getElementById('depTxid').value;
 
-            const { error } = await supabase.from('transactions').insert({
+            const { error } = await db.from('transactions').insert({
                 user_id: currentUser.id,
                 type: 'deposit',
                 amount: amount,
