@@ -69,10 +69,6 @@
             box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.5);
         }
 
-        .gold-glow {
-            box-shadow: 0 0 25px rgba(245, 158, 11, 0.25);
-        }
-
         .gold-gradient-text {
             background: linear-gradient(135deg, #FBBF24 0%, #F59E0B 50%, #D97706 100%);
             -webkit-background-clip: text;
@@ -111,18 +107,14 @@
                     </div>
                 </div>
 
-                <div id="navRight" class="flex items-center space-x-4">
-                    <!-- Dynamic Nav Content -->
-                </div>
+                <div id="navRight" class="flex items-center space-x-4"></div>
             </div>
         </div>
     </nav>
 
     <!-- MAIN CONTAINER -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full">
-        <div id="appContainer">
-            <!-- Dynamic Content (Auth / Dashboard) -->
-        </div>
+        <div id="appContainer"></div>
     </main>
 
     <!-- FOOTER -->
@@ -148,6 +140,13 @@
         let currentUser = null;
         let userProfile = null;
         let activeTab = 'dashboard';
+
+        // ვამოწმებთ არის თუ არა ლინკში რეფერალური კოდი და ვინახავთ LocalStorage-ში
+        const urlParams = new URLSearchParams(window.location.search);
+        const refFromUrl = urlParams.get('ref');
+        if (refFromUrl) {
+            localStorage.setItem('invited_by', refFromUrl);
+        }
 
         window.addEventListener('DOMContentLoaded', async () => {
             try {
@@ -179,6 +178,8 @@
                 <button onclick="renderAuthPage(false)" class="text-sm font-medium text-gray-300 hover:text-white px-3 py-2">შესვლა</button>
                 <button onclick="renderAuthPage(true)" class="text-sm font-semibold text-black gold-gradient-bg px-4 py-2 rounded-lg hover:brightness-110 transition shadow-md">რეგისტრაცია</button>
             `;
+
+            const savedRef = localStorage.getItem('invited_by') || '';
 
             const container = document.getElementById('appContainer');
             container.innerHTML = `
@@ -217,10 +218,10 @@
 
                         ${isSignUp ? `
                             <div>
-                                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">რეფერალური კოდი (არასავალდებულო)</label>
+                                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">რეფერალური კოდი</label>
                                 <div class="relative">
                                     <i class="fa-solid fa-users absolute left-4 top-3.5 text-gray-500"></i>
-                                    <input type="text" id="refCode" class="w-full bg-gray-900/90 border border-gray-700/80 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-amber-500 transition text-sm" placeholder="მაგ: REF123">
+                                    <input type="text" id="refCode" value="${savedRef}" class="w-full bg-gray-900/90 border border-gray-700/80 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-amber-500 transition text-sm" placeholder="არასავალდებულო">
                                 </div>
                             </div>
                         ` : ''}
@@ -247,7 +248,7 @@
 
             if (isSignUp) {
                 const fullName = document.getElementById('fullName').value;
-                const refCode = document.getElementById('refCode').value;
+                const refCode = document.getElementById('refCode').value || localStorage.getItem('invited_by') || null;
 
                 const { data, error } = await db.auth.signUp({
                     email,
@@ -257,6 +258,7 @@
 
                 if (error) alert(error.message);
                 else {
+                    localStorage.removeItem('invited_by');
                     alert("რეგისტრაცია წარმატებით გაიარე!");
                     location.reload();
                 }
@@ -288,7 +290,6 @@
 
             const container = document.getElementById('appContainer');
             container.innerHTML = `
-                <!-- TAB NAVIGATION -->
                 <div class="flex border-b border-gray-800 mb-8 space-x-2 overflow-x-auto pb-1 custom-scrollbar">
                     <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-5 py-3 font-medium text-sm rounded-xl transition flex items-center space-x-2 whitespace-nowrap bg-amber-500/10 text-amber-500 border border-amber-500/20">
                         <i class="fa-solid fa-chart-pie"></i><span>დეშბორდი</span>
@@ -305,8 +306,6 @@
                         </button>
                     ` : ''}
                 </div>
-
-                <!-- TAB CONTENTS -->
                 <div id="tabContent"></div>
             `;
 
@@ -330,8 +329,6 @@
             if (tab === 'referral') loadReferralTab();
             if (tab === 'admin') loadAdminTab();
         }
-
-        // ---------- TAB CONTENTS ----------
 
         async function loadDashboardTab() {
             const content = document.getElementById('tabContent');
@@ -395,7 +392,6 @@
                     <h2 class="text-xl font-bold font-display text-white">საინვესტიციო პაკეტები</h2>
                     <p class="text-sm text-gray-400 mt-1">აირჩიე სასურველი პაკეტი და დაიწყე ყოველდღიური მოგების მიღება</p>
                 </div>
-
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     ${packages.map(p => `
                         <div class="glass-card p-6 rounded-2xl relative border border-gray-800 flex flex-col justify-between">
@@ -437,6 +433,18 @@
                     </div>
 
                     <div class="space-y-4">
+                        <!-- ცალკე რეფერალური კოდის ჩვენება -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">შენი რეფერალური კოდი</label>
+                            <div class="flex space-x-2">
+                                <input type="text" readonly value="${refCode}" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-sm text-amber-400 font-bold focus:outline-none">
+                                <button onclick="navigator.clipboard.writeText('${refCode}'); alert('კოდი დაკოპირდა!')" class="bg-gray-800 hover:bg-gray-750 text-white font-bold px-5 rounded-xl transition text-sm border border-gray-700">
+                                    კოპირება
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- სრული ლინკი -->
                         <div>
                             <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">შენი რეფერალური ლინკი</label>
                             <div class="flex space-x-2">
@@ -467,8 +475,6 @@
             content.innerHTML = `<div class="glass-card p-6 rounded-2xl text-center text-gray-400">ადმინ პანელი მალე დაემატება</div>`;
         }
 
-        // ---------- MODALS & ACTIONS ----------
-
         function openDepositModal() {
             const modalHtml = `
                 <div id="modalOverlay" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
@@ -477,14 +483,11 @@
                             <h3 class="text-lg font-bold text-white">USDT TRC20 დეპოზიტი</h3>
                             <button onclick="closeModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
                         </div>
-                        
                         <p class="text-xs text-gray-400 mb-4">გადმორიცხეთ სასურველი თანხა მითითებულ მისამართზე და შეიყვანეთ ტრანზაქციის TXID:</p>
-
                         <div class="bg-gray-900/90 p-3 rounded-xl border border-gray-800 mb-4 flex justify-between items-center">
                             <span class="text-xs font-mono text-amber-400 truncate mr-2">${myWalletAddress}</span>
                             <button onclick="navigator.clipboard.writeText('${myWalletAddress}'); alert('მისამართი დაკოპირდა!')" class="text-xs text-amber-500 hover:underline">კოპირება</button>
                         </div>
-
                         <form onsubmit="handleDepositSubmit(event)" class="space-y-4">
                             <div>
                                 <label class="block text-xs font-semibold text-gray-400 mb-1">თანხა (USDT)</label>
@@ -516,7 +519,7 @@
         async function handleDepositSubmit(e) {
             e.preventDefault();
             const amount = parseFloat(document.getElementById('depAmount').value);
-            const txid = document.getElementById('depTxid').value;
+            const txid = document.getElementById('depTxid'].value;
 
             const { error } = await db.from('transactions').insert({
                 user_id: currentUser.id,
