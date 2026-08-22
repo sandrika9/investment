@@ -188,7 +188,6 @@
                 userPackagesList = [];
             } else {
                 userPackagesList = data || [];
-                console.log("Loaded user packages:", userPackagesList);
             }
         }
 
@@ -387,8 +386,8 @@
                             </div>
                         </div>
                         <div class="mt-4 pt-4 border-t border-gray-800 flex justify-between items-center">
-                            <span class="text-xs text-gray-400">შესაძლებელია მოგების აღება</span>
-                            <button onclick="openCaseClaimModal()" class="bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500 hover:text-black font-semibold px-3 py-1.5 rounded-lg text-xs transition">მოგების აღება</button>
+                            <span class="text-xs text-gray-400">ყოველ 6 საათიანი შემოსავალი</span>
+                            <button onclick="openCaseClaimModal()" class="bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500 hover:text-black font-semibold px-3 py-1.5 rounded-lg text-xs transition">ქეისის გახსნა</button>
                         </div>
                     </div>
 
@@ -427,13 +426,42 @@
             `;
         }
 
-        // ქეისის გახსნის სტილში დაკლეიმება
+        // 6 საათიანი ქეისის გახსნა და მოგების დარიცხვა
         function openCaseClaimModal() {
-            const availableEarnings = userProfile?.total_earned || 0;
-            if (availableEarnings <= 0) {
-                alert("მოსაგები თანხა მიმდინარე პერიოდში არ გაქვს.");
+            if (!userPackagesList || userPackagesList.length === 0) {
+                alert("შემოსავლის მისაღებად საჭიროა გქონდეს აქტიური პაკეტი!");
                 return;
             }
+
+            // შევამოწმოთ ბოლო განაღდების დრო (last_claim_at)
+            const lastClaim = userProfile?.last_claim_at ? new Date(userProfile.last_claim_at) : null;
+            const now = new Date();
+
+            if (lastClaim) {
+                const diffHours = (now - lastClaim) / (1000 * 60 * 60);
+                if (diffHours < 6) {
+                    const remainingMins = Math.ceil((6 - diffHours) * 60);
+                    const hoursLeft = Math.floor(remainingMins / 60);
+                    const minsLeft = remainingMins % 60;
+                    alert(`ქეისის გასახსნელად უნდა დაიცადო კიდევ ${hoursHours || hoursLeft} სთ და ${minsLeft} წთ.`);
+                    return;
+                }
+            }
+
+            // გამოვთვალოთ 6 საათიანი მოგება ყველა აქტიური პაკეტიდან
+            // მაგალითად: დღიური პროცენტიდან გამომდინარე ყოველ 6 საათში ირიცხება დღიურის 1/4
+            let totalReward = 0;
+            userPackagesList.forEach(up => {
+                let dailyRate = 0.025; // Starter 2.5%
+                if (up.package_name.includes('Pro')) dailyRate = 0.035; // 3.5%
+                if (up.package_name.includes('VIP')) dailyRate = 0.05; // 5.0%
+
+                const dailyProfit = up.amount * dailyRate;
+                const sixHourProfit = dailyProfit / 4;
+                totalReward += sixHourProfit;
+            });
+
+            if (totalReward <= 0) totalReward = 0.50; // მინიმალური უსაფრთხო ბონუსი
 
             const modalHtml = `
                 <div id="caseModalOverlay" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
@@ -441,14 +469,14 @@
                         <div class="w-16 h-16 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto text-2xl mb-4">
                             <i class="fa-solid fa-box-open animate-bounce"></i>
                         </div>
-                        <h3 class="text-xl font-bold text-white mb-2 font-display">ყოველდღიური ქეისი</h3>
-                        <p class="text-xs text-gray-400 mb-6">გახსენი ქეისი და გადაიტანე შენი მოგება ძირითად ბალანსზე!</p>
+                        <h3 class="text-xl font-bold text-white mb-2 font-display">6-საათიანი ქეისი</h3>
+                        <p class="text-xs text-gray-400 mb-6">გახსენი ქეისი და მიიღე შენი მოგება პაკეტებიდან!</p>
                         
                         <div id="caseBoxDisplay" class="bg-gray-900/90 py-6 rounded-xl border border-gray-800 mb-6 text-3xl font-extrabold text-amber-400 font-display">
                             ???
                         </div>
 
-                        <button id="spinCaseBtn" onclick="spinAndClaim(${availableEarnings})" class="w-full gold-gradient-bg text-black font-bold py-3.5 rounded-xl hover:brightness-110 transition text-sm shadow-lg shadow-amber-500/20">
+                        <button id="spinCaseBtn" onclick="spinAndClaim(${totalReward})" class="w-full gold-gradient-bg text-black font-bold py-3.5 rounded-xl hover:brightness-110 transition text-sm shadow-lg shadow-amber-500/20">
                             ქეისის გახსნა
                         </button>
                     </div>
@@ -457,33 +485,41 @@
             document.body.insertAdjacentHTML('beforeend', modalHtml);
         }
 
-        async function spinAndClaim(earnedAmount) {
+        async function spinAndClaim(rewardAmount) {
             const btn = document.getElementById('spinCaseBtn');
             const display = document.getElementById('caseBoxDisplay');
             btn.disabled = true;
 
             let counter = 0;
             const interval = setInterval(() => {
-                const randomFlashing = (Math.random() * earnedAmount).toFixed(2);
+                const randomFlashing = (Math.random() * rewardAmount * 1.5).toFixed(2);
                 display.innerText = `$${randomFlashing}`;
                 counter++;
                 if (counter > 15) {
                     clearInterval(interval);
-                    display.innerText = `$${earnedAmount.toFixed(2)}`;
-                    finalizeClaim(earnedAmount);
+                    display.innerText = `$${rewardAmount.toFixed(2)}`;
+                    finalizeClaim(rewardAmount);
                 }
             }, 100);
         }
 
-        async function finalizeClaim(earnedAmount) {
-            const newBal = (userProfile?.balance || 0) + earnedAmount;
-            await db.from('profiles').update({ balance: newBal, total_earned: 0 }).eq('id', currentUser.id);
+        async function finalizeClaim(rewardAmount) {
+            const newBal = (userProfile?.balance || 0) + rewardAmount;
+            const newTotalEarned = (userProfile?.total_earned || 0) + rewardAmount;
+            const nowIso = new Date().toISOString();
+
+            await db.from('profiles').update({ 
+                balance: newBal, 
+                total_earned: newTotalEarned,
+                last_claim_at: nowIso
+            }).eq('id', currentUser.id);
+
             await fetchProfile();
 
             setTimeout(() => {
                 const overlay = document.getElementById('caseModalOverlay');
                 if (overlay) overlay.remove();
-                alert(`გილოცავ! წარმატებით აიღე $${earnedAmount.toFixed(2)} და გადმოიტანე ძირითად ბალანსზე.`);
+                alert(`გილოცავ! შენ წარმატებით აიღე $${rewardAmount.toFixed(2)} შენი 6-საათიანი ქეისიდან.`);
                 loadDashboardTab();
             }, 1200);
         }
@@ -499,7 +535,7 @@
             content.innerHTML = `
                 <div class="mb-6">
                     <h2 class="text-xl font-bold font-display text-white">საინვესტიციო პაკეტები</h2>
-                    <p class="text-sm text-gray-400 mt-1">აირჩიე სასურველი პაკეტი და დაიწყე ყოველდღიური მოგების მიღება</p>
+                    <p class="text-sm text-gray-400 mt-1">აირჩიე სასურველი პაკეტი და მიიღე შემოსავალი ყოველ 6 საათში</p>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     ${packages.map(p => {
@@ -516,7 +552,7 @@
                                     <ul class="space-y-3 text-sm text-gray-300 border-t border-gray-800/80 pt-4 mb-6">
                                         <li class="flex justify-between"><span class="text-gray-500">ინვესტიცია:</span> <span class="font-semibold">$${p.min} - $${p.max}</span></li>
                                         <li class="flex justify-between"><span class="text-gray-500">ხანგრძლივობა:</span> <span class="font-semibold">${p.days} დღე</span></li>
-                                        <li class="flex justify-between"><span class="text-gray-500">გატანა:</span> <span class="font-semibold text-emerald-400">ნებისმიერ დროს</span></li>
+                                        <li class="flex justify-between"><span class="text-gray-500">დარიცხვა:</span> <span class="font-semibold text-emerald-400">ყოველ 6 საათში</span></li>
                                     </ul>
                                 </div>
                                 <button ${isAlreadyActive ? 'disabled' : `onclick="buyPackage(${p.min}, '${p.name}')"`} class="w-full font-bold py-3 rounded-xl transition shadow-sm ${isAlreadyActive ? 'bg-gray-800 text-gray-500 border border-gray-700 cursor-not-allowed' : 'bg-amber-500/10 border border-amber-500/30 text-amber-500 hover:bg-amber-500 hover:text-black'}">
@@ -540,7 +576,6 @@
 
             const newBalance = currentBal - minAmount;
             
-            // Supabase-ში ჩაწერა
             const { error: profileErr } = await db.from('profiles').update({ balance: newBalance }).eq('id', currentUser.id);
             if (profileErr) {
                 alert("ბალანსის განახლების შეცდომა: " + profileErr.message);
@@ -774,8 +809,8 @@
 
         async function handleDepositSubmit(e) {
             e.preventDefault();
-            const amount = parseFloat(document.getElementById('depAmount').value);
-            const txid = document.getElementById('depTxid').value;
+            const amount = parseFloat(document.getElementById('depAmount'].value);
+            const txid = document.getElementById('depTxid'].value;
 
             const { error } = await db.from('transactions').insert({
                 user_id: currentUser.id,
