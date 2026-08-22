@@ -9,7 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts (Inter & Poppins) -->
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -426,14 +426,12 @@
             `;
         }
 
-        // 6 საათიანი ქეისის გახსნა და მოგების დარიცხვა
         function openCaseClaimModal() {
             if (!userPackagesList || userPackagesList.length === 0) {
                 alert("შემოსავლის მისაღებად საჭიროა გქონდეს აქტიური პაკეტი!");
                 return;
             }
 
-            // შევამოწმოთ ბოლო განაღდების დრო (last_claim_at)
             const lastClaim = userProfile?.last_claim_at ? new Date(userProfile.last_claim_at) : null;
             const now = new Date();
 
@@ -443,25 +441,23 @@
                     const remainingMins = Math.ceil((6 - diffHours) * 60);
                     const hoursLeft = Math.floor(remainingMins / 60);
                     const minsLeft = remainingMins % 60;
-                    alert(`ქეისის გასახსნელად უნდა დაიცადო კიდევ ${hoursHours || hoursLeft} სთ და ${minsLeft} წთ.`);
+                    alert(`ქეისის გასახსნელად უნდა დაიცადო კიდევ ${hoursLeft} სთ და ${minsLeft} წთ.`);
                     return;
                 }
             }
 
-            // გამოვთვალოთ 6 საათიანი მოგება ყველა აქტიური პაკეტიდან
-            // მაგალითად: დღიური პროცენტიდან გამომდინარე ყოველ 6 საათში ირიცხება დღიურის 1/4
             let totalReward = 0;
             userPackagesList.forEach(up => {
-                let dailyRate = 0.025; // Starter 2.5%
-                if (up.package_name.includes('Pro')) dailyRate = 0.035; // 3.5%
-                if (up.package_name.includes('VIP')) dailyRate = 0.05; // 5.0%
+                let dailyRate = 0.025; 
+                if (up.package_name && up.package_name.includes('Pro')) dailyRate = 0.035; 
+                if (up.package_name && up.package_name.includes('VIP')) dailyRate = 0.05; 
 
                 const dailyProfit = up.amount * dailyRate;
                 const sixHourProfit = dailyProfit / 4;
                 totalReward += sixHourProfit;
             });
 
-            if (totalReward <= 0) totalReward = 0.50; // მინიმალური უსაფრთხო ბონუსი
+            if (totalReward <= 0) totalReward = 0.50;
 
             const modalHtml = `
                 <div id="caseModalOverlay" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
@@ -488,16 +484,16 @@
         async function spinAndClaim(rewardAmount) {
             const btn = document.getElementById('spinCaseBtn');
             const display = document.getElementById('caseBoxDisplay');
-            btn.disabled = true;
+            if (btn) btn.disabled = true;
 
             let counter = 0;
             const interval = setInterval(() => {
                 const randomFlashing = (Math.random() * rewardAmount * 1.5).toFixed(2);
-                display.innerText = `$${randomFlashing}`;
+                if (display) display.innerText = `$${randomFlashing}`;
                 counter++;
                 if (counter > 15) {
                     clearInterval(interval);
-                    display.innerText = `$${rewardAmount.toFixed(2)}`;
+                    if (display) display.innerText = `$${rewardAmount.toFixed(2)}`;
                     finalizeClaim(rewardAmount);
                 }
             }, 100);
@@ -809,8 +805,8 @@
 
         async function handleDepositSubmit(e) {
             e.preventDefault();
-            const amount = parseFloat(document.getElementById('depAmount'].value);
-            const txid = document.getElementById('depTxid'].value;
+            const amount = parseFloat(document.getElementById('depAmount').value);
+            const txid = document.getElementById('depTxid').value;
 
             const { error } = await db.from('transactions').insert({
                 user_id: currentUser.id,
