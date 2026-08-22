@@ -89,6 +89,14 @@
             background: rgba(75, 85, 99, 0.5);
             border-radius: 3px;
         }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 15px rgba(245, 158, 11, 0.3); }
+            50% { box-shadow: 0 0 30px rgba(245, 158, 11, 0.6); }
+        }
+        .case-opening-box {
+            animation: pulse-glow 1.5s infinite;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between custom-scrollbar">
@@ -140,6 +148,7 @@
         let currentUser = null;
         let userProfile = null;
         let activeTab = 'dashboard';
+        let userPackagesList = [];
 
         const urlParams = new URLSearchParams(window.location.search);
         const refFromUrl = urlParams.get('ref');
@@ -153,6 +162,7 @@
                 if (session) {
                     currentUser = session.user;
                     await fetchProfile();
+                    await fetchUserPackages();
                     renderMainDashboard();
                 } else {
                     const hasRef = localStorage.getItem('invited_by');
@@ -166,8 +176,14 @@
 
         async function fetchProfile() {
             if (!currentUser) return;
-            const { data, error } = await db.from('profiles').select('*').eq('id', currentUser.id).single();
+            const { data } = await db.from('profiles').select('*').eq('id', currentUser.id).single();
             if (data) userProfile = data;
+        }
+
+        async function fetchUserPackages() {
+            if (!currentUser) return;
+            const { data } = await db.from('user_packages').select('*').eq('user_id', currentUser.id);
+            if (data) userPackagesList = data;
         }
 
         function renderAuthPage(isSignUp = false) {
@@ -334,9 +350,7 @@
 
         async function loadDashboardTab() {
             const content = document.getElementById('tabContent');
-            
-            // შევამოწმოთ აქტიური პაკეტები ამ მომხმარებლისთვის
-            const { data: userPkgs } = await db.from('user_packages').select('*').eq('user_id', currentUser.id);
+            await fetchUserPackages();
 
             content.innerHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -368,7 +382,7 @@
                         </div>
                         <div class="mt-4 pt-4 border-t border-gray-800 flex justify-between items-center">
                             <span class="text-xs text-gray-400">შესაძლებელია მოგების აღება</span>
-                            <button onclick="claimEarnings()" class="bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500 hover:text-black font-semibold px-3 py-1.5 rounded-lg text-xs transition">მოგების აღება</button>
+                            <button onclick="openCaseClaimModal()" class="bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500 hover:text-black font-semibold px-3 py-1.5 rounded-lg text-xs transition">მოგების აღება</button>
                         </div>
                     </div>
 
@@ -388,23 +402,84 @@
 
                 <div class="glass-panel p-6 rounded-2xl border border-gray-800">
                     <h3 class="text-lg font-bold font-display text-white mb-4">ჩემი აქტიური პაკეტები</h3>
-                    ${!userPkgs || userPkgs.length === 0 ? `
+                    ${!userPackagesList || userPackagesList.length === 0 ? `
                         <p class="text-sm text-gray-400 text-center py-6">აქტიური პაკეტები არ გაქვს. გადადი პაკეტების გვერდზე და გააქტიურე.</p>
                     ` : `
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            ${userPkgs.map(up => `
+                            ${userPackagesList.map(up => `
                                 <div class="bg-gray-900/60 p-4 rounded-xl border border-gray-800 flex justify-between items-center">
                                     <div>
-                                        <h4 class="font-bold text-white">${up.package_name || 'ინვესტიცია'}</h4>
-                                        <p class="text-xs text-gray-400 mt-1">თანხა: <span class="text-amber-400 font-semibold">$${up.amount}</span></p>
+                                        <h4 class="font-bold text-white">${up.package_name}</h4>
+                                        <p class="text-xs text-gray-400 mt-1">ინვესტიცია: <span class="text-amber-400 font-semibold">$${up.amount}</span></p>
                                     </div>
-                                    <span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">აქტიური</span>
+                                    <span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">აქტიურია</span>
                                 </div>
                             `).join('')}
                         </div>
                     `}
                 </div>
             `;
+        }
+
+        // ქეისის გახსნის სტილში დაკლეიმება
+        function openCaseClaimModal() {
+            const availableEarnings = userProfile?.total_earned || 0;
+            if (availableEarnings <= 0) {
+                alert("მოსაგები თანხა მიმდინარე პერიოდში არ გაქვს.");
+                return;
+            }
+
+            const modalHtml = `
+                <div id="caseModalOverlay" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                    <div class="glass-panel max-w-md w-full p-8 rounded-2xl border border-amber-500/40 text-center case-opening-box">
+                        <div class="w-16 h-16 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto text-2xl mb-4">
+                            <i class="fa-solid fa-box-open animate-bounce"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2 font-display">ყოველდღიური ქეისი</h3>
+                        <p class="text-xs text-gray-400 mb-6">გახსენი ქეისი და გადაიტანე შენი მოგება ძირითად ბალანსზე!</p>
+                        
+                        <div id="caseBoxDisplay" class="bg-gray-900/90 py-6 rounded-xl border border-gray-800 mb-6 text-3xl font-extrabold text-amber-400 font-display">
+                            ???
+                        </div>
+
+                        <button id="spinCaseBtn" onclick="spinAndClaim(${availableEarnings})" class="w-full gold-gradient-bg text-black font-bold py-3.5 rounded-xl hover:brightness-110 transition text-sm shadow-lg shadow-amber-500/20">
+                            ქეისის გახსნა
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+
+        async function spinAndClaim(earnedAmount) {
+            const btn = document.getElementById('spinCaseBtn');
+            const display = document.getElementById('caseBoxDisplay');
+            btn.disabled = true;
+
+            let counter = 0;
+            const interval = setInterval(() => {
+                const randomFlashing = (Math.random() * earnedAmount).toFixed(2);
+                display.innerText = `$${randomFlashing}`;
+                counter++;
+                if (counter > 15) {
+                    clearInterval(interval);
+                    display.innerText = `$${earnedAmount.toFixed(2)}`;
+                    finalizeClaim(earnedAmount);
+                }
+            }, 100);
+        }
+
+        async function finalizeClaim(earnedAmount) {
+            const newBal = (userProfile?.balance || 0) + earnedAmount;
+            await db.from('profiles').update({ balance: newBal, total_earned: 0 }).eq('id', currentUser.id);
+            await fetchProfile();
+
+            setTimeout(() => {
+                const overlay = document.getElementById('caseModalOverlay');
+                if (overlay) overlay.remove();
+                alert(`გილოცავ! წარმატებით აიღე $${earnedAmount.toFixed(2)} და გადმოიტანე ძირითად ბალანსზე.`);
+                loadDashboardTab();
+            }, 1200);
         }
 
         function loadPackagesTab() {
@@ -421,26 +496,29 @@
                     <p class="text-sm text-gray-400 mt-1">აირჩიე სასურველი პაკეტი და დაიწყე ყოველდღიური მოგების მიღება</p>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    ${packages.map(p => `
-                        <div class="glass-card p-6 rounded-2xl relative border border-gray-800 flex flex-col justify-between">
-                            <div>
-                                <div class="w-full h-2 rounded-full bg-gradient-to-r ${p.color} mb-4"></div>
-                                <h3 class="text-xl font-bold text-white">${p.name}</h3>
-                                <div class="mt-4 mb-6">
-                                    <span class="text-4xl font-extrabold text-amber-500 font-display">${p.daily}</span>
-                                    <span class="text-xs text-gray-400 block mt-1">დღიური მოგება</span>
+                    ${packages.map(p => {
+                        const isAlreadyActive = userPackagesList.some(up => up.package_name === p.name);
+                        return `
+                            <div class="glass-card p-6 rounded-2xl relative border border-gray-800 flex flex-col justify-between">
+                                <div>
+                                    <div class="w-full h-2 rounded-full bg-gradient-to-r ${p.color} mb-4"></div>
+                                    <h3 class="text-xl font-bold text-white">${p.name}</h3>
+                                    <div class="mt-4 mb-6">
+                                        <span class="text-4xl font-extrabold text-amber-500 font-display">${p.daily}</span>
+                                        <span class="text-xs text-gray-400 block mt-1">დღიური მოგება</span>
+                                    </div>
+                                    <ul class="space-y-3 text-sm text-gray-300 border-t border-gray-800/80 pt-4 mb-6">
+                                        <li class="flex justify-between"><span class="text-gray-500">ინვესტიცია:</span> <span class="font-semibold">$${p.min} - $${p.max}</span></li>
+                                        <li class="flex justify-between"><span class="text-gray-500">ხანგრძლივობა:</span> <span class="font-semibold">${p.days} დღე</span></li>
+                                        <li class="flex justify-between"><span class="text-gray-500">გატანა:</span> <span class="font-semibold text-emerald-400">ნებისმიერ დროს</span></li>
+                                    </ul>
                                 </div>
-                                <ul class="space-y-3 text-sm text-gray-300 border-t border-gray-800/80 pt-4 mb-6">
-                                    <li class="flex justify-between"><span class="text-gray-500">ინვესტიცია:</span> <span class="font-semibold">$${p.min} - $${p.max}</span></li>
-                                    <li class="flex justify-between"><span class="text-gray-500">ხანგრძლივობა:</span> <span class="font-semibold">${p.days} დღე</span></li>
-                                    <li class="flex justify-between"><span class="text-gray-500">გატანა:</span> <span class="font-semibold text-emerald-400">ნებისმიერ დროს</span></li>
-                                </ul>
+                                <button ${isAlreadyActive ? 'disabled' : `onclick="buyPackage(${p.min}, '${p.name}')"`} class="w-full font-bold py-3 rounded-xl transition shadow-sm ${isAlreadyActive ? 'bg-gray-800 text-gray-500 border border-gray-700 cursor-not-allowed' : 'bg-amber-500/10 border border-amber-500/30 text-amber-500 hover:bg-amber-500 hover:text-black'}">
+                                    ${isAlreadyActive ? 'უკვე აქტიურია' : 'პაკეტის გააქტიურება'}
+                                </button>
                             </div>
-                            <button onclick="buyPackage(${p.min}, '${p.name}')" class="w-full bg-amber-500/10 border border-amber-500/30 text-amber-500 font-bold py-3 rounded-xl hover:bg-amber-500 hover:text-black transition shadow-sm">
-                                პაკეტის გააქტიურება
-                            </button>
-                        </div>
-                    `).join('')}
+                        `;
+                    }).join('')}
                 </div>
             `;
         }
@@ -454,14 +532,14 @@
 
             if (!confirm(`ნამდვილად გინდა გაააქტიურო ${pkgName} ($${minAmount})?`)) return;
 
-            // თანხის ჩამოჭრა ბალანსიდან და პაკეტის ჩაწერა
             const newBalance = currentBal - minAmount;
             await db.from('profiles').update({ balance: newBalance }).eq('id', currentUser.id);
             await db.from('user_packages').insert({ user_id: currentUser.id, package_name: pkgName, amount: minAmount });
 
             alert("პაკეტი წარმატებით გააქტიურდა!");
             await fetchProfile();
-            renderMainDashboard();
+            await fetchUserPackages();
+            loadPackagesTab();
         }
 
         function loadReferralTab() {
@@ -549,19 +627,6 @@
             } else {
                 alert("სამწუხაროდ ამჯერად არაფერი ხვდა წილად. სცადე თავიდან!");
             }
-        }
-
-        async function claimEarnings() {
-            const earned = userProfile?.total_earned || 0;
-            if (earned <= 0) {
-                alert("მოსაგები თანხა მიმდინარე პერიოდში არ გაქვს.");
-                return;
-            }
-            const newBal = (userProfile?.balance || 0) + earned;
-            await db.from('profiles').update({ balance: newBal, total_earned: 0 }).eq('id', currentUser.id);
-            await fetchProfile();
-            alert(`წარმატებით აიღე $${earned.toFixed(2)} და გადმოიტანე ძირითად ბალანსზე!`);
-            loadDashboardTab();
         }
 
         async function loadAdminTab() {
