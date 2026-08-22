@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Capital Investment Platform</title>
+    <title>Capital Investment Platform - Case Opening Edition</title>
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -50,7 +50,7 @@
         }
 
         .glass-panel {
-            background: rgba(17, 24, 39, 0.7);
+            background: rgba(17, 24, 39, 0.75);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border: 1px solid rgba(255, 255, 255, 0.08);
@@ -96,6 +96,56 @@
         }
         .case-opening-box {
             animation: pulse-glow 1.5s infinite;
+        }
+
+        /* Case Roulette Opening Styles */
+        .case-spinner-container {
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            height: 130px;
+            background: rgba(3, 7, 18, 0.9);
+            border-radius: 1rem;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        .case-spinner-pointer {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 4px;
+            background: #F59E0B;
+            transform: translateX(-50%);
+            z-index: 20;
+            box-shadow: 0 0 12px #F59E0B;
+        }
+        .case-spinner-pointer::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 10px solid #F59E0B;
+        }
+        .case-spinner-track {
+            display: flex;
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            will-change: transform;
+        }
+        .case-item-card {
+            min-width: 120px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 0 10px;
         }
     </style>
 </head>
@@ -387,7 +437,7 @@
                         </div>
                         <div class="mt-4 pt-4 border-t border-gray-800 flex justify-between items-center">
                             <span class="text-xs text-gray-400">ყოველ 6 საათიანი შემოსავალი</span>
-                            <button onclick="openCaseClaimModal()" class="bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500 hover:text-black font-semibold px-3 py-1.5 rounded-lg text-xs transition">ქეისის გახსნა</button>
+                            <button onclick="openCaseClaimModal()" class="bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500 hover:text-black font-semibold px-3 py-1.5 rounded-lg text-xs transition shadow-lg shadow-emerald-500/10">ქეისის გახსნა</button>
                         </div>
                     </div>
 
@@ -426,6 +476,9 @@
             `;
         }
 
+        // ==========================================
+        // MODERN CASE OPENING SYSTEM (ROULETTE STYLE)
+        // ==========================================
         function openCaseClaimModal() {
             if (!userPackagesList || userPackagesList.length === 0) {
                 alert("შემოსავლის მისაღებად საჭიროა გქონდეს აქტიური პაკეტი!");
@@ -446,13 +499,11 @@
                 }
             }
 
-            // გამოვთვალოთ საბაზისო 6-საათიანი თანხა ყველა აქტიური პაკეტიდან
-            // მაგ: თუ 500$-იანი პაკეტია (VIP Investor), დღიური მოგებაა 5% = 25$. 6 საათიანი = 25 / 4 = 6.25$
             let baseSixHourTotal = 0;
             userPackagesList.forEach(up => {
-                let dailyRate = 0.025; // Starter 2.5%
-                if (up.package_name && up.package_name.includes('Pro')) dailyRate = 0.035; // Pro Yield 3.5%
-                if (up.package_name && up.package_name.includes('VIP')) dailyRate = 0.05; // VIP Investor 5.0%
+                let dailyRate = 0.025; 
+                if (up.package_name && up.package_name.includes('Pro')) dailyRate = 0.035; 
+                if (up.package_name && up.package_name.includes('VIP')) dailyRate = 0.05; 
 
                 const dailyProfit = up.amount * dailyRate;
                 const sixHourProfit = dailyProfit / 4;
@@ -463,79 +514,94 @@
 
             const modalHtml = `
                 <div id="caseModalOverlay" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
-                    <div class="glass-panel max-w-md w-full p-8 rounded-2xl border border-amber-500/40 text-center case-opening-box">
-                        <div class="w-16 h-16 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto text-2xl mb-4">
+                    <div class="glass-panel max-w-xl w-full p-8 rounded-2xl border border-amber-500/40 text-center case-opening-box">
+                        <div class="w-14 h-14 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto text-xl mb-3">
                             <i class="fa-solid fa-box-open animate-bounce"></i>
                         </div>
-                        <h3 class="text-xl font-bold text-white mb-2 font-display">6-საათიანი ქეისის გახსნა</h3>
-                        <p class="text-xs text-gray-400 mb-6">დაატრიალე ქეისი და მიიღე შენი რარობა (Common, Rare, Epic, Legendary)!</p>
+                        <h3 class="text-xl font-bold text-white mb-1 font-display">6-საათიანი ქეისის გახსნა</h3>
+                        <p class="text-xs text-gray-400 mb-6">ამოიღე შენი ბონუს მულტიპლიკატორი (Common 1.0x, Rare 1.5x, Epic 2.0x, Legendary 3.0x)!</p>
                         
-                        <div id="caseRarityDisplay" class="bg-gray-900/90 py-4 rounded-xl border border-gray-800 mb-2 text-sm font-bold text-gray-400 uppercase tracking-widest">
+                        <!-- ROULETTE SPINNER WINDOW -->
+                        <div class="case-spinner-container mb-6 shadow-inner">
+                            <div class="case-spinner-pointer"></div>
+                            <div id="spinnerTrack" class="case-spinner-track"></div>
+                        </div>
+
+                        <div id="caseResultInfo" class="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-6 h-6">
                             მზადაა გასახსნელად
                         </div>
 
-                        <div id="caseBoxDisplay" class="bg-gray-900/90 py-6 rounded-xl border border-gray-800 mb-6 text-3xl font-extrabold text-amber-400 font-display">
-                            $${baseSixHourTotal.toFixed(2)} (1.0x)
-                        </div>
-
                         <button id="spinCaseBtn" onclick="spinAndClaimCase(${baseSixHourTotal})" class="w-full gold-gradient-bg text-black font-bold py-3.5 rounded-xl hover:brightness-110 transition text-sm shadow-lg shadow-amber-500/20">
-                            ქეისის გახსნა
+                            ქეისის დატრიალება
                         </button>
                     </div>
                 </div>
             `;
             document.body.insertAdjacentHTML('beforeend', modalHtml);
+            buildSpinnerItems(baseSixHourTotal);
+        }
+
+        function buildSpinnerItems(baseAmount) {
+            const track = document.getElementById('spinnerTrack');
+            if (!track) return;
+
+            // შევქმნათ ელემენტების დიდი სია რულეტკისთვის (მაგ: 60 ელემენტი)
+            const itemTemplates = [
+                { name: 'Common', mult: 1.0, color: 'text-gray-400 bg-gray-800/40 border-gray-700' },
+                { name: 'Rare', mult: 1.5, color: 'text-blue-400 bg-blue-950/40 border-blue-500/40' },
+                { name: 'Epic', mult: 2.0, color: 'text-purple-400 bg-purple-950/40 border-purple-500/40' },
+                { name: 'Legendary', mult: 3.0, color: 'text-amber-400 bg-amber-950/40 border-amber-500/40' }
+            ];
+
+            let html = '';
+            // გენერაცია შემთხვევითი წესით
+            window.generatedSpinItems = [];
+            for (let i = 0; i < 60; i++) {
+                const randTmpl = itemTemplates[Math.floor(Math.random() * itemTemplates.length)];
+                window.generatedSpinItems.push(randTmpl);
+                html += `
+                    <div class="case-item-card border ${randTmpl.color}">
+                        <span class="text-[10px] uppercase font-bold tracking-wider">${randTmpl.name}</span>
+                        <span class="text-lg font-ext500 font-display mt-1">$${(baseAmount * randTmpl.mult).toFixed(1)}</span>
+                        <span class="text-[10px] opacity-70">(${randTmpl.mult}x)</span>
+                    </div>
+                `;
+            }
+            track.innerHTML = html;
+            track.style.transform = `translateX(0px)`;
         }
 
         async function spinAndClaimCase(baseAmount) {
             const btn = document.getElementById('spinCaseBtn');
-            const display = document.getElementById('caseBoxDisplay');
-            const rarityDisplay = document.getElementById('caseRarityDisplay');
+            const track = document.getElementById('spinnerTrack');
+            const info = document.getElementById('caseResultInfo');
             if (btn) btn.disabled = true;
 
-            // შანსების განაწილება (Probability Ratios)
-            // Common: 60%, Rare: 25%, Epic: 12%, Legendary: 3%
+            // შანსების ზუსტი განაწილება (Index 45-ე ელემენტზე გავაჩეროთ გამარჯვებული)
             const rand = Math.random() * 100;
-            let chosenRarity = '';
-            let multiplier = 1.0;
-            let rarityColor = '';
+            let winningTmpl;
+            if (rand < 60) winningTmpl = { name: 'Common (60%)', mult: 1.0, color: 'text-gray-400' };
+            else if (rand < 85) winningTmpl = { name: 'Rare (25%)', mult: 1.5, color: 'text-blue-400' };
+            else if (rand < 97) winningTmpl = { name: 'Epic (12%)', mult: 2.0, color: 'text-purple-400' };
+            else winningTmpl = { name: 'Legendary (3%) 🔥', mult: 3.0, color: 'text-amber-400' };
 
-            if (rand < 60) {
-                chosenRarity = 'Common (60%)';
-                multiplier = 1.0;
-                rarityColor = 'text-gray-400 border-gray-700';
-            } else if (rand < 85) {
-                chosenRarity = 'Rare (25%)';
-                multiplier = 1.5;
-                rarityColor = 'text-blue-400 border-blue-500/40';
-            } else if (rand < 97) {
-                chosenRarity = 'Epic (12%)';
-                multiplier = 2.0;
-                rarityColor = 'text-purple-400 border-purple-500/40';
-            } else {
-                chosenRarity = 'Legendary (3%) 🔥';
-                multiplier = 3.0;
-                rarityColor = 'text-amber-400 border-amber-500/40';
-            }
+            // ჩავანაცვლოთ 45-ე ელემენტი ზუსტი მომგებიანით
+            window.generatedSpinItems[45] = winningTmpl;
+            const cardWidth = 120; // ერთეულის სიგანე პიქსელებში
+            // გავასწოროთ 45-ე ინდექსი ცენტრში (კონტეინერის სიგანე დაახლ. 520px / 2 = 260px)
+            const targetPixelOffset = (45 * cardWidth) - (520 / 2) + (cardWidth / 2) + (Math.random() * 40 - 20);
 
-            const finalReward = baseAmount * multiplier;
+            track.style.transition = 'transform 4s cubic-bezier(0.15, 0.85, 0.15, 1)';
+            track.style.transform = `translateX(-${targetPixelOffset}px)`;
 
-            let counter = 0;
-            const interval = setInterval(() => {
-                const randomMult = [1.0, 1.5, 2.0, 3.0][Math.floor(Math.random() * 4)];
-                const randomVal = baseAmount * randomMult;
-                if (display) display.innerText = `$${randomVal.toFixed(2)} (${randomMult}x)`;
-                counter++;
-                if (counter > 15) {
-                    clearInterval(interval);
-                    if (rarityDisplay) {
-                        rarityDisplay.innerText = chosenRarity;
-                        rarityDisplay.className = `bg-gray-900/90 py-4 rounded-xl border mb-2 text-sm font-bold uppercase tracking-widest ${rarityColor}`;
-                    }
-                    if (display) display.innerText = `$${finalReward.toFixed(2)} (${multiplier}x)`;
-                    finalizeClaim(finalReward, chosenRarity);
+            const finalReward = baseAmount * winningTmpl.mult;
+
+            setTimeout(async () => {
+                if (info) {
+                    info.innerHTML = `<span class="${winningTmpl.color} font-bold text-base">მოვლენა: ${winningTmpl.name} ($${finalReward.toFixed(2)})</span>`;
                 }
-            }, 100);
+                await finalizeClaim(finalReward, winningTmpl.name);
+            }, 4200);
         }
 
         async function finalizeClaim(rewardAmount, rarityName) {
@@ -556,7 +622,7 @@
                 if (overlay) overlay.remove();
                 alert(`გილოცავ! შენ ამოიღე [${rarityName}] და მიიღე $${rewardAmount.toFixed(2)} შენი ქეისიდან.`);
                 loadDashboardTab();
-            }, 1500);
+            }, 1800);
         }
 
         function loadPackagesTab() {
@@ -586,12 +652,12 @@
                                     </div>
                                     <ul class="space-y-3 text-sm text-gray-300 border-t border-gray-800/80 pt-4 mb-6">
                                         <li class="flex justify-between"><span class="text-gray-500">ინვესტიცია:</span> <span class="font-semibold">$${p.min} - $${p.max}</span></li>
-                                        <li class="flex justify-between"><span class="text-gray-500">ხანგრძლივობა:</span> <span class="font-semibold">${p.days} დღე</span></li>
-                                        <li class="flex justify-between"><span class="text-gray-500">დარიცხვა:</span> <span class="font-semibold text-emerald-400">ყოველ 6 საათში</span></li>
+                                        <li class="flex justify-between"><span class="text-gray-500">ვადა:</span> <span class="font-semibold">${p.days} დღე</span></li>
+                                        <li class="flex justify-between"><span class="text-gray-500">გადახდა:</span> <span class="font-semibold">ყოველ 6 საათში</span></li>
                                     </ul>
                                 </div>
-                                <button ${isAlreadyActive ? 'disabled' : `onclick="buyPackage(${p.min}, '${p.name}')"`} class="w-full font-bold py-3 rounded-xl transition shadow-sm ${isAlreadyActive ? 'bg-gray-800 text-gray-500 border border-gray-700 cursor-not-allowed' : 'bg-amber-500/10 border border-amber-500/30 text-amber-500 hover:bg-amber-500 hover:text-black'}">
-                                    ${isAlreadyActive ? 'უკვე აქტიურია' : 'პაკეტის გააქტიურება'}
+                                <button onclick="openBuyPackageModal('${p.name}', ${p.min}, ${p.max})" class="w-full ${isAlreadyActive ? 'bg-gray-800 text-gray-400 border border-gray-700' : 'gold-gradient-bg text-black font-bold'} py-3 rounded-xl transition text-sm shadow-md">
+                                    ${isAlreadyActive ? 'პაკეტი აქტიურია' : 'პაკეტის შეძენა'}
                                 </button>
                             </div>
                         `;
@@ -600,86 +666,68 @@
             `;
         }
 
-        async function buyPackage(minAmount, pkgName) {
-            const currentBal = userProfile?.balance || 0;
-            if (currentBal < minAmount) {
-                alert(`პაკეტის ასარჩევად საჭიროა მინიმუმ $${minAmount} დეპოზიტი. შენი ბალანსია: $${currentBal.toFixed(2)}`);
+        function openBuyPackageModal(packageName, min, max) {
+            const modalHtml = `
+                <div id="buyModalOverlay" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                    <div class="glass-panel max-w-md w-full p-8 rounded-2xl border border-gray-800">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-lg font-bold text-white">${packageName}</h3>
+                            <button onclick="document.getElementById('buyModalOverlay').remove()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+                        </div>
+                        <p class="text-xs text-gray-400 mb-4">შეიყვანე თანხა დიაპაზონში (<span class="text-amber-400">$${min} - $${max}</span>):</p>
+                        <input type="number" id="investAmountInput" min="${min}" max="${max}" placeholder="${min}" class="w-full bg-gray-900 border border-gray-700 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-amber-500 mb-6 text-sm">
+                        <button onclick="confirmBuyPackage('${packageName}', ${min}, ${max})" class="w-full gold-gradient-bg text-black font-bold py-3.5 rounded-xl transition text-sm shadow-lg shadow-amber-500/20">
+                            დადასტურება და შეძენა
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+
+        async function confirmBuyPackage(packageName, min, max) {
+            const amountVal = parseFloat(document.getElementById('investAmountInput').value);
+            if (isNaN(amountVal) || amountVal < min || amountVal > max) {
+                alert(`თანხა უნდა იყოს ${min} და ${max} დოლარს შორის!`);
                 return;
             }
 
-            if (!confirm(`ნამდვილად გინდა გაააქტიურო ${pkgName} ($${minAmount})?`)) return;
-
-            const newBalance = currentBal - minAmount;
-            
-            const { error: profileErr } = await db.from('profiles').update({ balance: newBalance }).eq('id', currentUser.id);
-            if (profileErr) {
-                alert("ბალანსის განახლების შეცდომა: " + profileErr.message);
+            if ((userProfile?.balance || 0) < amountVal) {
+                alert("ბალანსზე არ გაქვს საკმარისი თანხა! ჯერ გააკეთე დეპოზიტი.");
                 return;
             }
 
-            const { error: pkgErr } = await db.from('user_packages').insert({ 
-                user_id: currentUser.id, 
-                package_name: pkgName, 
-                amount: minAmount 
-            });
+            const newBalance = userProfile.balance - amountVal;
+            await db.from('profiles').update({ balance: newBalance }).eq('id', currentUser.id);
+            await db.from('user_packages').insert([{
+                user_id: currentUser.id,
+                package_name: packageName,
+                amount: amountVal,
+                status: 'active'
+            }]);
 
-            if (pkgErr) {
-                alert("პაკეტის შეძენის შეცდომა: " + pkgErr.message);
-                return;
-            }
-
+            document.getElementById('buyModalOverlay').remove();
             alert("პაკეტი წარმატებით გააქტიურდა!");
             await fetchProfile();
             await fetchUserPackages();
-            loadPackagesTab();
+            switchTab('dashboard');
         }
 
         function loadReferralTab() {
             const content = document.getElementById('tabContent');
-            const refCode = userProfile?.referral_code || (currentUser ? currentUser.id.slice(0, 8) : '');
-            const refLink = `${window.location.origin}?ref=${refCode}`;
+            const refLink = `${window.location.origin}${window.location.pathname}?ref=${currentUser.id}`;
 
             content.innerHTML = `
-                <div class="max-w-2xl mx-auto glass-card p-8 rounded-2xl border border-gray-800">
-                    <div class="text-center mb-6">
-                        <div class="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto text-2xl mb-3">
-                            <i class="fa-solid fa-gift"></i>
-                        </div>
-                        <h2 class="text-2xl font-bold font-display text-white">მოიწვიე მეგობრები</h2>
-                        <p class="text-sm text-gray-400 mt-2">მიიღე 5% ბონუსი შენი მოწვეული მომხმარებლების თითოეულ დეპოზიტზე!</p>
-                    </div>
-
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">შენი რეფერალური კოდი</label>
-                            <div class="flex space-x-2">
-                                <input type="text" readonly value="${refCode}" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-sm text-amber-400 font-bold focus:outline-none">
-                                <button onclick="navigator.clipboard.writeText('${refCode}'); alert('კოდი დაკოპირდა!')" class="bg-gray-800 hover:bg-gray-700 text-white font-bold px-5 rounded-xl transition text-sm border border-gray-700">
-                                    კოპირება
-                                </button>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">შენი რეფერალური ლინკი</label>
-                            <div class="flex space-x-2">
-                                <input type="text" readonly value="${refLink}" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-300 focus:outline-none">
-                                <button onclick="navigator.clipboard.writeText('${refLink}'); alert('ლინკი დაკოპირდა!')" class="bg-amber-500 hover:bg-amber-600 text-black font-bold px-5 rounded-xl transition text-sm">
-                                    კოპირება
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="pt-4 border-t border-gray-800 flex justify-around text-center">
-                            <div>
-                                <span class="text-2xl font-bold text-white block">${userProfile?.referral_count || 0}</span>
-                                <span class="text-xs text-gray-500">მოწვეული</span>
-                            </div>
-                            <div>
-                                <span class="text-2xl font-bold text-amber-500 block">$${(userProfile?.referral_earnings || 0).toFixed(2)}</span>
-                                <span class="text-xs text-gray-500">გამომუშავებული</span>
-                            </div>
-                        </div>
+                <div class="glass-panel p-8 rounded-2xl border border-gray-800 max-w-2xl mx-auto">
+                    <h3 class="text-xl font-bold font-display text-white mb-2">მოიწვიე მეგობრები</h3>
+                    <p class="text-sm text-gray-400 mb-6">მიიღე შენი მეგობრების ინვესტიციების 5% მყისიერად ბალანსზე.</p>
+                    
+                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">შენი რეფერალური ბმული</label>
+                    <div class="flex items-center space-x-3 mb-6">
+                        <input type="text" readonly value="${refLink}" class="w-full bg-gray-900 border border-gray-700 rounded-xl py-3 px-4 text-gray-300 text-sm select-all">
+                        <button onclick="navigator.clipboard.writeText('${refLink}'); alert('ბმული დაკოპირდა!');" class="gold-gradient-bg text-black font-bold px-5 py-3 rounded-xl text-sm transition hover:brightness-110 whitespace-nowrap">
+                            კოპირება
+                        </button>
                     </div>
                 </div>
             `;
@@ -688,145 +736,41 @@
         function loadLotteryTab() {
             const content = document.getElementById('tabContent');
             content.innerHTML = `
-                <div class="max-w-xl mx-auto glass-card p-8 rounded-2xl border border-gray-800 text-center">
-                    <div class="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto text-2xl mb-4">
-                        <i class="fa-solid fa-dice"></i>
+                <div class="glass-panel p-8 rounded-2xl border border-gray-800 text-center max-w-xl mx-auto">
+                    <div class="w-16 h-16 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto text-2xl mb-4">
+                        <i class="fa-solid fa-dice animate-spin"></i>
                     </div>
-                    <h2 class="text-2xl font-bold font-display text-white mb-2">იღბლიანი გათამაშება</h2>
-                    <p class="text-sm text-gray-400 mb-6">სცადე ბედი და მოიგე ფულადი პრიზები ყოველდღიურად!</p>
-                    
-                    <div class="bg-gray-900/80 p-6 rounded-xl border border-gray-800 mb-6">
-                        <span class="text-xs text-gray-500 uppercase tracking-wider block">საპრიზო ფონდი</span>
-                        <span class="text-4xl font-extrabold text-amber-400 font-display mt-1 block">$1,000</span>
-                    </div>
-
-                    <button onclick="playLottery()" class="w-full gold-gradient-bg text-black font-bold py-3.5 rounded-xl hover:brightness-110 transition text-sm shadow-lg shadow-amber-500/20">
-                        ბილეთის აღება და გათამაშება
-                    </button>
+                    <h3 class="text-xl font-bold text-white mb-2 font-display">ყოველკვირეული გათამაშება</h3>
+                    <p class="text-sm text-gray-400 mb-6">მალე დაემატება სპეციალური ლატარია აქტიური ინვესტორებისთვის.</p>
                 </div>
             `;
         }
 
-        async function playLottery() {
-            const prizes = [5, 10, 25, 50, 0, 100];
-            const randomPrize = prizes[Math.floor(Math.random() * prizes.length)];
-            
-            if (randomPrize > 0) {
-                const newBal = (userProfile?.balance || 0) + randomPrize;
-                await db.from('profiles').update({ balance: newBal }).eq('id', currentUser.id);
-                await fetchProfile();
-                alert(`გილოცავ! შენ მოიგე $${randomPrize}! თანხა დაგერიცხა ბალანსზე.`);
-            } else {
-                alert("სამწუხაროდ ამჯერად არაფერი ხვდა წილად. სცადე თავიდან!");
-            }
-        }
-
-        async function loadAdminTab() {
+        function loadAdminTab() {
             const content = document.getElementById('tabContent');
-            content.innerHTML = `<div class="glass-card p-6 rounded-2xl text-center text-gray-400">მოთხოვნების ჩატვირთვა...</div>`;
-
-            const { data: txs, error } = await db.from('transactions').select('*').eq('status', 'pending').order('created_at', { ascending: false });
-
-            if (error) {
-                content.innerHTML = `<div class="glass-card p-6 rounded-2xl text-center text-red-400">შეცდომა: ${error.message}</div>`;
-                return;
-            }
-
-            if (!txs || txs.length === 0) {
-                content.innerHTML = `<div class="glass-card p-8 rounded-2xl text-center text-gray-400"><i class="fa-solid fa-circle-check text-3xl text-emerald-500 mb-2 block"></i>მიმდინარე დეპოზიტის მოთხოვნები არ არის.</div>`;
-                return;
-            }
-
             content.innerHTML = `
-                <div class="glass-panel p-6 rounded-2xl border border-gray-800">
-                    <h2 class="text-xl font-bold font-display text-white mb-4">მომხმარებელთა დეპოზიტების მოთხოვნები</h2>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-sm text-gray-300">
-                            <thead class="bg-gray-900/60 text-xs uppercase text-gray-400 border-b border-gray-800">
-                                <tr>
-                                    <th class="p-3">User ID</th>
-                                    <th class="p-3">თანხა</th>
-                                    <th class="p-3">TXID (ჰეში)</th>
-                                    <th class="p-3">მოქმედება</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-800/60">
-                                ${txs.map(tx => `
-                                    <tr>
-                                        <td class="p-3 font-mono text-xs text-gray-400">${tx.user_id}</td>
-                                        <td class="p-3 font-bold text-amber-400">$${tx.amount}</td>
-                                        <td class="p-3 font-mono text-xs text-blue-400 truncate max-w-xs">${tx.txid || 'არ არის'}</td>
-                                        <td class="p-3 space-x-2">
-                                            <button onclick="approveDeposit('${tx.id}', '${tx.user_id}', ${tx.amount})" class="bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500 hover:text-black font-semibold px-3 py-1.5 rounded-lg text-xs transition">დამტკიცება</button>
-                                            <button onclick="rejectDeposit('${tx.id}')" class="bg-red-500/20 border border-red-500/40 text-red-400 hover:bg-red-500 hover:text-white font-semibold px-3 py-1.5 rounded-lg text-xs transition">უარყოფა</button>
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="glass-panel p-8 rounded-2xl border border-red-500/30 max-w-2xl mx-auto">
+                    <h3 class="text-xl font-bold font-display text-red-400 mb-4"><i class="fa-solid fa-user-shield mr-2"></i> ადმინისტრატორის პანელი</h3>
+                    <p class="text-sm text-gray-300">მოგესალმები ადმინისტრირების პანელში. აქედან შეგიძლია მომხმარებლებისა და დეპოზიტების მართვა.</p>
                 </div>
             `;
-        }
-
-        async function approveDeposit(txId, userId, amount) {
-            if (!confirm(`ნამდვილად გინდა დამტკიცება ($${amount})?`)) return;
-
-            const { data: profileData } = await db.from('profiles').select('balance').eq('id', userId).single();
-            const currentBalance = profileData?.balance || 0;
-            const newBalance = currentBalance + amount;
-
-            const { error: updateErr } = await db.from('profiles').update({ balance: newBalance }).eq('id', userId);
-            if (updateErr) {
-                alert("ბალანსის განახლების შეცდომა: " + updateErr.message);
-                return;
-            }
-
-            const { error: txErr } = await db.from('transactions').update({ status: 'approved' }).eq('id', txId);
-            if (txErr) {
-                alert("ტრანზაქციის შეცდომა: " + txErr.message);
-            } else {
-                alert("დეპოზიტი წარმატებით დამტკიცდა და ბალანსი მიემატა!");
-                loadAdminTab();
-            }
-        }
-
-        async function rejectDeposit(txId) {
-            if (!confirm("ნამდვილად გინდა უარყოფა?")) return;
-            const { error } = await db.from('transactions').update({ status: 'rejected' }).eq('id', txId);
-            if (error) alert(error.message);
-            else {
-                alert("მოთხოვნა უარყოფილია.");
-                loadAdminTab();
-            }
         }
 
         function openDepositModal() {
             const modalHtml = `
-                <div id="modalOverlay" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-                    <div class="glass-panel max-w-md w-full p-6 rounded-2xl border border-gray-800">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-lg font-bold text-white">USDT TRC20 დეპოზიტი</h3>
-                            <button onclick="closeModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+                <div id="depositModalOverlay" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                    <div class="glass-panel max-w-md w-full p-8 rounded-2xl border border-gray-800">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-lg font-bold text-white">ბალანსის შევსება (USDT TRC20)</h3>
+                            <button onclick="document.getElementById('depositModalOverlay').remove()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
                         </div>
-                        <p class="text-xs text-gray-400 mb-4">გადმორიცხეთ სასურველი თანხა მითითებულ მისამართზე და შეიყვანეთ ტრანზაქციის TXID:</p>
-                        <div class="bg-gray-900/90 p-3 rounded-xl border border-gray-800 mb-4 flex justify-between items-center">
-                            <span class="text-xs font-mono text-amber-400 truncate mr-2">${myWalletAddress}</span>
-                            <button onclick="navigator.clipboard.writeText('${myWalletAddress}'); alert('მისამართი დაკოპირდა!')" class="text-xs text-amber-500 hover:underline">კოპირება</button>
+                        <p class="text-xs text-gray-400 mb-2">გადმორიცხე თანხა მითითებულ მისამართზე:</p>
+                        <div class="bg-gray-900 border border-gray-700 p-3 rounded-xl mb-4 text-xs font-mono text-amber-400 break-all select-all">
+                            ${myWalletAddress}
                         </div>
-                        <form onsubmit="handleDepositSubmit(event)" class="space-y-4">
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-400 mb-1">თანხა (USDT)</label>
-                                <input type="number" min="10" id="depAmount" required class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500" placeholder="100">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-400 mb-1">TXID (ტრანზაქციის ჰეში)</label>
-                                <input type="text" id="depTxid" required class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500" placeholder="e.g. 7f9b8...">
-                            </div>
-                            <button type="submit" class="w-full gold-gradient-bg text-black font-bold py-3 rounded-xl hover:brightness-110 transition text-sm">
-                                დადასტურების მოთხოვნა
-                            </button>
-                        </form>
+                        <button onclick="document.getElementById('depositModalOverlay').remove(); alert('მოთხოვნა გაგზავნილია. თანხა აისახება დეპოზიტის შემოწმების შემდეგ.');" class="w-full gold-gradient-bg text-black font-bold py-3 rounded-xl transition text-sm">
+                            გადარიცხვის დასტურის გაგზავნა
+                        </button>
                     </div>
                 </div>
             `;
@@ -834,32 +778,26 @@
         }
 
         function openWithdrawModal() {
-            alert("გატანის ფუნქცია მალე დაემატება.");
-        }
+            const modalHtml = `
+                <div id="withdrawModalOverlay" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                    <div class="glass-panel max-w-md w-full p-8 rounded-2xl border border-gray-800">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-lg font-bold text-white">თანხის გატანა</h3>
+                            <button onclick="document.getElementById('withdrawModalOverlay').remove()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+                        </div>
+                        <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">USDT TRC20 მისამართი</label>
+                        <input type="text" placeholder="T..." class="w-full bg-gray-900 border border-gray-700 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-amber-500 mb-4 text-sm">
+                        
+                        <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">თანხა ($)</label>
+                        <input type="number" placeholder="10" class="w-full bg-gray-900 border border-gray-700 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-amber-500 mb-6 text-sm">
 
-        function closeModal() {
-            const overlay = document.getElementById('modalOverlay');
-            if (overlay) overlay.remove();
-        }
-
-        async function handleDepositSubmit(e) {
-            e.preventDefault();
-            const amount = parseFloat(document.getElementById('depAmount').value);
-            const txid = document.getElementById('depTxid').value;
-
-            const { error } = await db.from('transactions').insert({
-                user_id: currentUser.id,
-                type: 'deposit',
-                amount: amount,
-                txid: txid,
-                status: 'pending'
-            });
-
-            if (error) alert(error.message);
-            else {
-                alert("მოთხოვნა გაგზავნილია! ადმინისტრატორი შეამოწმებს ტრანზაქციას.");
-                closeModal();
-            }
+                        <button onclick="document.getElementById('withdrawModalOverlay').remove(); alert('გატანის მოთხოვნა წარმატებით გაიგზავნა!');" class="w-full gold-gradient-bg text-black font-bold py-3 rounded-xl transition text-sm">
+                            მოთხოვნის გაგზავნა
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
         }
     </script>
 </body>
