@@ -141,7 +141,6 @@
         let userProfile = null;
         let activeTab = 'dashboard';
 
-        // ვამოწმებთ არის თუ არა ლინკში რეფერალური კოდი
         const urlParams = new URLSearchParams(window.location.search);
         const refFromUrl = urlParams.get('ref');
         if (refFromUrl) {
@@ -156,7 +155,6 @@
                     await fetchProfile();
                     renderMainDashboard();
                 } else {
-                    // თუ მომხმარებელი არ არის შესული, მაგრამ ლინკში მოყვა ?ref= კოდი, ავტომატურად ვხსნით რეგისტრაციის გვერდს
                     const hasRef = localStorage.getItem('invited_by');
                     renderAuthPage(hasRef ? true : false);
                 }
@@ -179,7 +177,6 @@
                 <button onclick="renderAuthPage(true)" class="text-sm font-semibold text-black gold-gradient-bg px-4 py-2 rounded-lg hover:brightness-110 transition shadow-md">რეგისტრაცია</button>
             `;
 
-            // ვიღებთ შენახულ რეფერალურ კოდს (თუ არსებობს)
             const savedRef = localStorage.getItem('invited_by') || '';
 
             const container = document.getElementById('appContainer');
@@ -187,7 +184,7 @@
                 <div class="max-w-md mx-auto my-12 glass-panel p-8 rounded-2xl shadow-2xl border border-gray-800">
                     <div class="text-center mb-8">
                         <h2 class="text-2xl font-bold font-display text-white">${isSignUp ? 'ანგარიშის შექმნა' : 'ავტორიზაცია'}</h2>
-                        <p class="text-sm text-gray-400 mt-2">${isSignUp ? 'შეუერთდი საინვესტიციო პლატფორმას (მოწვეული ხართ მეგობრის მიერ)' : 'მართე შენი პორტფოლიო'}</p>
+                        <p class="text-sm text-gray-400 mt-2">${isSignUp ? 'შეუერთდი საინვესტიციო პლატფორმას' : 'მართე შენი პორტფოლიო'}</p>
                     </div>
 
                     <form onsubmit="handleAuth(event, ${isSignUp})" class="space-y-5">
@@ -222,7 +219,6 @@
                                 <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">რეფერალური კოდი</label>
                                 <div class="relative">
                                     <i class="fa-solid fa-users absolute left-4 top-3.5 text-gray-500"></i>
-                                    <!-- აქ ავტომატურად ჩაჯდება ლინკიდან წამოღებული კოდი -->
                                     <input type="text" id="refCode" value="${savedRef}" class="w-full bg-gray-900/90 border border-amber-500/50 rounded-xl py-3 pl-11 pr-4 text-amber-400 font-bold focus:outline-none focus:border-amber-500 transition text-sm" placeholder="არასავალდებულო">
                                 </div>
                             </div>
@@ -470,9 +466,87 @@
             `;
         }
 
-        function loadAdminTab() {
+        async function loadAdminTab() {
             const content = document.getElementById('tabContent');
-            content.innerHTML = `<div class="glass-card p-6 rounded-2xl text-center text-gray-400">ადმინ პანელი მალე დაემატება</div>`;
+            content.innerHTML = `<div class="glass-card p-6 rounded-2xl text-center text-gray-400">მოთხოვნების ჩატვირთვა...</div>`;
+
+            // მოვაქვთ ყველა "pending" დეპოზიტი
+            const { data: txs, error } = await db.from('transactions').select('*').eq('status', 'pending').order('created_at', { ascending: false });
+
+            if (error) {
+                content.innerHTML = `<div class="glass-card p-6 rounded-2xl text-center text-red-400">შეცდომა: ${error.message}</div>`;
+                return;
+            }
+
+            if (!txs || txs.length === 0) {
+                content.innerHTML = `<div class="glass-card p-8 rounded-2xl text-center text-gray-400"><i class="fa-solid fa-circle-check text-3xl text-emerald-500 mb-2 block"></i>მიმდინარე დეპოზიტის მოთხოვნები არ არის.</div>`;
+                return;
+            }
+
+            content.innerHTML = `
+                <div class="glass-panel p-6 rounded-2xl border border-gray-800">
+                    <h2 class="text-xl font-bold font-display text-white mb-4">მომხმარებელთა დეპოზიტების მოთხოვნები</h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-gray-300">
+                            <thead class="bg-gray-900/60 text-xs uppercase text-gray-400 border-b border-gray-800">
+                                <tr>
+                                    <th class="p-3">User ID</th>
+                                    <th class="p-3">თანხა</th>
+                                    <th class="p-3">TXID (ჰეში)</th>
+                                    <th class="p-3">მოქმედება</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-800/60">
+                                ${txs.map(tx => `
+                                    <tr>
+                                        <td class="p-3 font-mono text-xs text-gray-400">${tx.user_id}</td>
+                                        <td class="p-3 font-bold text-amber-400">$${tx.amount}</td>
+                                        <td class="p-3 font-mono text-xs text-blue-400 truncate max-w-xs">${tx.txid || 'არ არის'}</td>
+                                        <td class="p-3 space-x-2">
+                                            <button onclick="approveDeposit('${tx.id}', '${tx.user_id}', ${tx.amount})" class="bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500 hover:text-black font-semibold px-3 py-1.5 rounded-lg text-xs transition">დამტკიცება</button>
+                                            <button onclick="rejectDeposit('${tx.id}')" class="bg-red-500/20 border border-red-500/40 text-red-400 hover:bg-red-500 hover:text-white font-semibold px-3 py-1.5 rounded-lg text-xs transition">უარყოფა</button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function approveDeposit(txId, userId, amount) {
+            if (!confirm(`ნამდვილად გინდა დამტკიცება ($${amount})?`)) return;
+
+            // 1. მივუმატოთ მომხმარებელს ბალანსი
+            const { data: profileData } = await db.from('profiles').select('balance').eq('id', userId).single();
+            const currentBalance = profileData?.balance || 0;
+            const newBalance = currentBalance + amount;
+
+            const { error: updateErr } = await db.from('profiles').update({ balance: newBalance }).eq('id', userId);
+            if (updateErr) {
+                alert("ბალანსის განახლების შეცდომა: " + updateErr.message);
+                return;
+            }
+
+            // 2. ტრანზაქციის სტატუსი გავხადოთ approved
+            const { error: txErr } = await db.from('transactions').update({ status: 'approved' }).eq('id', txId);
+            if (txErr) {
+                alert("ტრანზაქციის შეცდომა: " + txErr.message);
+            } else {
+                alert("დეპოზიტი წარმატებით დამტკიცდა და ბალანსი მიემატა!");
+                loadAdminTab();
+            }
+        }
+
+        async function rejectDeposit(txId) {
+            if (!confirm("ნამდვილად გინდა უარყოფა?")) return;
+            const { error } = await db.from('transactions').update({ status: 'rejected' }).eq('id', txId);
+            if (error) alert(error.message);
+            else {
+                alert("მოთხოვნა უარყოფილია.");
+                loadAdminTab();
+            }
         }
 
         function openDepositModal() {
